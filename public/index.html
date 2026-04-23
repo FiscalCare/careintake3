@@ -1336,28 +1336,42 @@ async function sendSignatureEnvelope(){
           // This prevents DocuSign from complaining about roles defined in the template
           // that we haven't assigned to anyone
           signers: p.recipients
-            .filter(rec => allRecipients.find(a => a.role === rec.role))
+            .filter(rec => {
+              const recFull = allRecipients.find(a => a.role === rec.role);
+              return recFull && recFull.method !== 'inperson';
+            })
             .map((rec, ri) => {
               const recFull = allRecipients.find(a => a.role === rec.role);
-              const isInPerson = recFull.method === 'inperson';
-              const email = isInPerson
-                ? `embedded.${rec.role.toLowerCase().replace(/[^a-z0-9]/g,'')}@careintake.local`
-                : (recFull.email || `signing.${rec.role.toLowerCase().replace(/[^a-z0-9]/g,'')}@careintake.local`);
+              const email = recFull.email || `signing.${rec.role.toLowerCase().replace(/[^a-z0-9]/g,'')}@careintake.local`;
               return {
                 roleName:     rec.role,
                 recipientId:  roleToId[rec.role] || String(ri + 1),
                 name:         recFull.name || rec.name,
                 email,
                 routingOrder: String(ri + 1),
-                ...(isInPerson ? {
-                  clientUserId: `${r.id}-${rec.role}`,
-                  signerName:   recFull.name || rec.name,
-                  hostName:     DS_CONFIG.bom.name,
-                  hostEmail:    DS_CONFIG.bom.email,
-                } : {}),
                 tabs: buildPrefillTabs(r, p.id),
               };
+            }),
+          inPersonSigners: p.recipients
+            .filter(rec => {
+              const recFull = allRecipients.find(a => a.role === rec.role);
+              return recFull && recFull.method === 'inperson';
             })
+            .map((rec, ri) => {
+              const recFull = allRecipients.find(a => a.role === rec.role);
+              const email = `embedded.${rec.role.toLowerCase().replace(/[^a-z0-9]/g,'')}@careintake.local`;
+              return {
+                roleName:     rec.role,
+                recipientId:  roleToId[rec.role] || String(ri + 1),
+                signerName:   recFull.name || rec.name,
+                signerEmail:  email,
+                hostName:     DS_CONFIG.bom.name,
+                hostEmail:    DS_CONFIG.bom.email,
+                clientUserId: `${r.id}-${rec.role}`,
+                routingOrder: String(ri + 1),
+                tabs: buildPrefillTabs(r, p.id),
+              };
+            }),
         }
       }]
     }));
