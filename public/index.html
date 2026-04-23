@@ -820,10 +820,11 @@ function maritalBadge(m){
 
 // ── SIGNATURE BUTTON LABELS ──
 function sigBtnLabel(r){
-  if(r.sigStatus==='completed')   return {label:'View Signed',  cls:'sig-done', disabled:false};
-  if(r.sigStatus==='pending')     return {label:'In Progress',  cls:'sig-sent', disabled:false};
-  if(r.sigStatus==='in-progress') return {label:'Continue',     cls:'sig-sent', disabled:false};
-  return                                 {label:'Signatures',   cls:'',         disabled:false};
+  if(r.sigStatus==='completed')        return {label:'View Signed',       cls:'sig-done', disabled:false};
+  if(r.sigStatus==='awaiting-spouse')  return {label:'Awaiting Spouse',   cls:'sig-sent', disabled:false};
+  if(r.sigStatus==='pending')          return {label:'In Progress',       cls:'sig-sent', disabled:false};
+  if(r.sigStatus==='in-progress')      return {label:'Continue',          cls:'sig-sent', disabled:false};
+  return                                      {label:'Start Signatures', cls:'',         disabled:false};
 }
 function qBtnLabel(r){
   if(r.qStatus==='completed') return {label:'Review Form',cls:'review',icon:'👁'};
@@ -1076,6 +1077,47 @@ async function _resumeSigningSession(r){
     console.error(e);
   }
 }
+// Open spouse signing session
+async function _resumeSpouseSigningSession(r){
+  if(!r.envelopeId) return;
+  const clientUserId = `${r.id}-Spouse`;
+  showToast('Opening spouse signing session...');
+  try{
+    const recipientsData = await dsAPI('getRecipients', { envelopeId: r.envelopeId });
+    const allRecs = [
+      ...(recipientsData.inPersonSigners || []),
+      ...(recipientsData.signers || []),
+    ];
+    const matchedRec = allRecs.find(rec =>
+      rec.clientUserId === clientUserId || rec.roleName === 'Spouse'
+    );
+    const recipientId = matchedRec?.recipientId || '2';
+    console.log('Spouse recipient id:', recipientId);
+
+    sessionStorage.setItem('ds_signing_role', 'Spouse');
+    const viewData = await dsAPI('recipientView', {
+      envelopeId: r.envelopeId,
+      viewRequest: {
+        returnUrl:            DS_CONFIG.redirectUri + `?signed=${r.envelopeId}`,
+        authenticationMethod: 'none',
+        email:                DS_CONFIG.bom.email,
+        userName:             DS_CONFIG.bom.name,
+        clientUserId,
+        recipientId,
+      }
+    });
+    if(viewData.url){
+      const win = window.open(viewData.url, '_blank');
+      if(!win) window.location.href = viewData.url;
+    } else {
+      showToast(`Could not open spouse session: ${viewData.message||'unknown error'}`);
+    }
+  } catch(e){
+    showToast('Could not open spouse signing session');
+    console.error(e);
+  }
+}
+
 let psAnswers = {}; // { marital, county, signer, veteran }
 let signingResident = null;
 
@@ -1090,6 +1132,13 @@ function openSigningModal(id){
     a.href = r.signedPdfUrl;
     a.download = `${r.name.replace(/\s+/g,'-')}-Signed-Documents.pdf`;
     a.click();
+    return;
+  }
+
+  // If awaiting spouse signature — open spouse signing session
+  if(r.sigStatus === 'awaiting-spouse' && r.envelopeId){
+    sessionStorage.setItem('ds_signing_resident', r.id);
+    _resumeSpouseSigningSession(r);
     return;
   }
 
@@ -1506,6 +1555,7 @@ async function sendSignatureEnvelope(){
       const clientUserId = `${r.id}-${role}`;
 
       sessionStorage.setItem('ds_signing_resident', r.id);
+      sessionStorage.setItem('ds_signing_role', role);
 
       // Use _recipients from envelope creation response if available
       const allRecs = [
@@ -2799,8 +2849,20 @@ renderList();
         r.updated    = new Date().toISOString().split('T')[0];
 
         if(event === 'signing_complete'){
-          // Check if ALL recipients have signed by polling envelope status
-          checkEnvelopeStatus(r);
+          // Check if this was the resident signing for a married couple
+          const signingRole = sessionStorage.getItem('ds_signing_role') || 'Resident';
+          if(r.marital === 'married' && signingRole !== 'Spouse'){
+            // Resident signed — now need spouse to sign
+            r.sigStatus = 'awaiting-spouse';
+            r.updated   = new Date().toISOString().split('T')[0];
+            sessionStorage.removeItem('ds_signing_resident');
+            sessionStorage.removeItem('ds_signing_role');
+            renderList();
+            showToast(`✓ Resident signed — spouse signature needed`);
+          } else {
+            // All done — check envelope status
+            checkEnvelopeStatus(r);
+          }
         } else if(event === 'cancel' || event === 'decline'){
           r.sigStatus = 'in-progress';
           renderList();
