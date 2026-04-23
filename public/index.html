@@ -1351,6 +1351,7 @@ async function sendSignatureEnvelope(){
                 routingOrder: String(ri + 1),
                 ...(isInPerson ? {
                   clientUserId: `${r.id}-${rec.role}`,
+                  signerName:   recFull.name || rec.name,
                   hostName:     DS_CONFIG.bom.name,
                   hostEmail:    DS_CONFIG.bom.email,
                 } : {}),
