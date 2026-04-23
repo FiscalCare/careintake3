@@ -55,6 +55,26 @@ module.exports = async (req, res) => {
       return res.status(viewResp.status).json(viewResp.data);
     }
 
+    // Get envelope status and recipient details
+    if(action === 'getEnvelope'){
+      const envResp = await apiRequest('GET',
+        `/restapi/v2.1/accounts/${ACCOUNT_ID}/envelopes/${body.envelopeId}`,
+        token, null
+      );
+      return res.status(envResp.status).json(envResp.data);
+    }
+
+    // Get combined signed PDF
+    if(action === 'getDocuments'){
+      const pdfResp = await apiRequestRaw('GET',
+        `/restapi/v2.1/accounts/${ACCOUNT_ID}/envelopes/${body.envelopeId}/documents/combined`,
+        token
+      );
+      // Return as base64 so we can handle it in the browser
+      res.setHeader('Content-Type', 'application/json');
+      return res.status(200).json({ pdf: pdfResp.toString('base64') });
+    }
+
     return res.status(400).json({ error: 'Unknown action' });
 
   } catch(err){
@@ -107,14 +127,14 @@ async function getJWTToken(userId, privateKeyRaw){
 
 function apiRequest(method, path, token, body){
   return new Promise((resolve, reject) => {
-    const bodyStr = JSON.stringify(body);
+    const bodyStr = body ? JSON.stringify(body) : '';
+    const headers = {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type':  'application/json',
+    };
+    if(bodyStr) headers['Content-Length'] = Buffer.byteLength(bodyStr);
     const req = https.request({
-      hostname: API_BASE, path, method,
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type':  'application/json',
-        'Content-Length': Buffer.byteLength(bodyStr),
-      },
+      hostname: API_BASE, path, method, headers,
     }, res => {
       let data = '';
       res.on('data', c => data += c);
@@ -124,7 +144,25 @@ function apiRequest(method, path, token, body){
       });
     });
     req.on('error', reject);
-    req.write(bodyStr);
+    if(bodyStr) req.write(bodyStr);
+    req.end();
+  });
+}
+
+function apiRequestRaw(method, path, token){
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: API_BASE, path, method,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/pdf',
+      },
+    }, res => {
+      const chunks = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => resolve(Buffer.concat(chunks)));
+    });
+    req.on('error', reject);
     req.end();
   });
 }
@@ -155,3 +193,6 @@ function b64url(str){
   return Buffer.from(str).toString('base64')
     .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 }
+
+// Already handled in main module.exports above
+// This file is complete
