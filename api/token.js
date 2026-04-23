@@ -69,6 +69,15 @@ module.exports = async (req, res) => {
       return res.status(viewResp.status).json(viewResp.data);
     }
 
+    // Get envelope recipients
+    if(action === 'getRecipients'){
+      const recResp = await apiRequest('GET',
+        `/restapi/v2.1/accounts/${ACCOUNT_ID}/envelopes/${body.envelopeId}/recipients`,
+        token, null
+      );
+      return res.status(recResp.status).json(recResp.data);
+    }
+
     // Get envelope status and recipient details
     if(action === 'getEnvelope'){
       const envResp = await apiRequest('GET',
