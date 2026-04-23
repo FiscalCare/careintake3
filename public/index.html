@@ -1491,16 +1491,28 @@ async function sendSignatureEnvelope(){
     if(inPersonSigners.length > 0){
       const signer = inPersonSigners[0];
       const role = signer.role;
-      // Use actual recipientId from DocuSign response, fall back to our assigned ID
       const clientUserId = `${r.id}-${role}`;
-      const recipientId = actualRecipientIds[role]
-        || actualRecipientIds[clientUserId]
-        || actualRecipientIds['Resident']
-        || roleToId[role]
-        || '1';
 
-      console.log('Using recipientId:', recipientId, 'for role:', role);
       sessionStorage.setItem('ds_signing_resident', r.id);
+
+      // First fetch the actual recipients from DocuSign to get correct recipientId
+      const recipientsData = await dsAPI('getRecipients', { envelopeId });
+      console.log('Recipients data:', JSON.stringify(recipientsData).substring(0, 800));
+
+      // Find our recipient by clientUserId
+      const allRecs = [
+        ...(recipientsData.inPersonSigners || []),
+        ...(recipientsData.signers || []),
+      ];
+      console.log('All recipients:', allRecs.map(r => ({role: r.roleName, id: r.recipientId, cuid: r.clientUserId})));
+
+      const matchedRec = allRecs.find(rec =>
+        rec.clientUserId === clientUserId ||
+        rec.roleName === role ||
+        rec.roleName === 'Resident'
+      );
+      const recipientId = matchedRec?.recipientId || '1';
+      console.log('Matched recipient:', matchedRec?.roleName, 'recipientId:', recipientId);
 
       const viewData = await dsAPI('recipientView', {
         envelopeId,
