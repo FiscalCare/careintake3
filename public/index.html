@@ -835,6 +835,9 @@ function qBtnLabel(r){
 //  RENDER RESIDENT LIST
 // ══════════════════════════════════════════
 function renderList(){
+  // Auto-save resident state on every render
+  saveToStorage();
+
   const search = document.getElementById('search-input').value.toLowerCase();
   const list = document.getElementById('resident-list');
   const filtered = residents.filter(r=>{
@@ -1218,6 +1221,10 @@ function _openFullSigningModal(r){
   signingResident = r;
   const isMarried = r.marital === 'married';
 
+  // Always reset the send button when modal opens
+  const sendBtn = document.getElementById('ds-send-btn');
+  if(sendBtn){ sendBtn.textContent = 'Start Signing'; sendBtn.disabled = false; }
+
   document.getElementById('ds-modal-resident-name').textContent = r.name;
   document.getElementById('ds-modal-resident-sub').textContent =
     `${r.county} County · ${r.marital.charAt(0).toUpperCase()+r.marital.slice(1)}${r.veteran==='yes'?' · Veteran':''}`;
@@ -1354,18 +1361,38 @@ async function sendSignatureEnvelope(){
 
   // Build recipient list from dsState
   const primaryName = dsState.primaryType === 'rep' ? repName : r.name;
-  const primaryRole = dsState.primaryType === 'rep' ? 'Representative' : 'Resident';
+  // Role name depends on template — submission-behalf uses 'Representative', others use 'Resident'
+  // We handle this per-template below using getSignerRoleForTemplate()
+  const primaryIsRep = dsState.primaryType === 'rep';
 
   const allRecipients = [
-    { role: primaryRole, name: primaryName, email: primaryEmail, method: dsState.primaryMethod },
+    {
+      role:   primaryIsRep ? 'Representative' : 'Resident',
+      name:   primaryName,
+      email:  primaryEmail,
+      method: dsState.primaryMethod
+    },
   ];
   if(isMarried){
     allRecipients.push({ role:'Spouse', name: r.spouseName||'Spouse', email: spouseEmail, method: dsState.spouseMethod });
   }
 
-  // Assign consistent recipient IDs across all templates
+  // For core templates, rep signs as 'Resident' role
+  // For submission-behalf template, rep signs as 'Representative' role
+  function getRoleForTemplate(templateId, defaultRole){
+    if(defaultRole === 'Representative' && templateId !== DS_CONFIG.templates.submissionBehalf){
+      return 'Resident'; // core templates use Resident even when rep is signing
+    }
+    return defaultRole;
+  }
+
+  // Assign consistent recipient IDs
   const roleToId = {};
   allRecipients.forEach((rec, i) => { roleToId[rec.role] = String(i + 1); });
+  // When rep is signing, also map 'Resident' role to same ID (for core templates)
+  if(primaryIsRep && !roleToId['Resident']){
+    roleToId['Resident'] = roleToId['Representative'] || '1';
+  }
 
   try{
     const compositeTemplates = pkg.map((p, idx) => ({
@@ -1379,15 +1406,17 @@ async function sendSignatureEnvelope(){
           // that we haven't assigned to anyone
           signers: p.recipients
             .filter(rec => {
-              const recFull = allRecipients.find(a => a.role === rec.role);
+              const mappedRole = getRoleForTemplate(p.id, rec.role);
+              const recFull = allRecipients.find(a => a.role === mappedRole || a.role === rec.role);
               return recFull && recFull.method !== 'inperson';
             })
             .map((rec, ri) => {
-              const recFull = allRecipients.find(a => a.role === rec.role);
+              const mappedRole = getRoleForTemplate(p.id, rec.role);
+              const recFull = allRecipients.find(a => a.role === mappedRole || a.role === rec.role);
               const email = recFull.email || `signing.${rec.role.toLowerCase().replace(/[^a-z0-9]/g,'')}@careintake.local`;
               return {
                 roleName:     rec.role,
-                recipientId:  roleToId[rec.role] || String(ri + 1),
+                recipientId:  roleToId[recFull.role] || String(ri + 1),
                 name:         recFull.name || rec.name,
                 email,
                 routingOrder: String(ri + 1),
@@ -1396,15 +1425,17 @@ async function sendSignatureEnvelope(){
             }),
           inPersonSigners: p.recipients
             .filter(rec => {
-              const recFull = allRecipients.find(a => a.role === rec.role);
+              const mappedRole = getRoleForTemplate(p.id, rec.role);
+              const recFull = allRecipients.find(a => a.role === mappedRole || a.role === rec.role);
               return recFull && recFull.method === 'inperson';
             })
             .map((rec, ri) => {
-              const recFull = allRecipients.find(a => a.role === rec.role);
+              const mappedRole = getRoleForTemplate(p.id, rec.role);
+              const recFull = allRecipients.find(a => a.role === mappedRole || a.role === rec.role);
               const email = `embedded.${rec.role.toLowerCase().replace(/[^a-z0-9]/g,'')}@careintake.local`;
               return {
                 roleName:     rec.role,
-                recipientId:  roleToId[rec.role] || String(ri + 1),
+                recipientId:  roleToId[recFull.role] || String(ri + 1),
                 signerName:   recFull.name || rec.name,
                 signerEmail:  email,
                 hostName:     DS_CONFIG.bom.name,
@@ -1433,6 +1464,9 @@ async function sendSignatureEnvelope(){
     const envelopeId = envData.envelopeId;
     r.envelopeId = envelopeId;
     console.log('Envelope created:', envelopeId);
+
+    // Start polling for status updates every 30 seconds
+    startPolling();
 
     // Open embedded signing for in-person signers
     const inPersonSigners = allRecipients.filter(rec => rec.method === 'inperson');
@@ -1799,6 +1833,7 @@ function addResident(){
   const newId='R-'+String(residents.length+1).padStart(4,'0');
   residents.unshift({ id:newId,name,dob,ssn:ssnMasked,ssnReal,county,marital,veteran,signer:signerSelected,qStatus:'not-started',sigStatus:'not-started',updated:today,colorIdx,qPct:0,sigPct:0 });
   closeModal();
+  saveToStorage();
   renderList();
   showToast(`${name} added — ready to start intake`);
 }
@@ -1951,6 +1986,7 @@ function persistProgress(){
     currentResident.qStatus = 'in-progress';
   }
   currentResident.updated = new Date().toISOString().split('T')[0];
+  saveToStorage();
 }
 
 // ══════════════════════════════════════════
@@ -2651,12 +2687,52 @@ function qSubmit(){
 }
 
 // ══════════════════════════════════════════
+//  LOCAL STORAGE PERSISTENCE
+// ══════════════════════════════════════════
+const STORAGE_KEY = 'careintake_residents_v1';
+const SESSION_KEY = 'careintake_sessions_v1';
+
+function saveToStorage(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(residents));
+    localStorage.setItem(SESSION_KEY, JSON.stringify(formSessions));
+  } catch(e){ console.error('Storage save failed:', e); }
+}
+
+function loadFromStorage(){
+  try{
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if(saved){
+      const parsed = JSON.parse(saved);
+      // Merge saved data into residents array — update matching records
+      parsed.forEach(saved => {
+        const idx = residents.findIndex(r => r.id === saved.id);
+        if(idx !== -1){
+          residents[idx] = { ...residents[idx], ...saved };
+        } else {
+          residents.push(saved); // new resident added by user
+        }
+      });
+    }
+    const savedSessions = localStorage.getItem(SESSION_KEY);
+    if(savedSessions){
+      Object.assign(formSessions, JSON.parse(savedSessions));
+    }
+  } catch(e){ console.error('Storage load failed:', e); }
+}
+
+// Auto-save whenever resident data changes
+function saveResident(r){
+  r.updated = new Date().toISOString().split('T')[0];
+  saveToStorage();
+}
+
+// ══════════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════════
+loadFromStorage(); // restore saved data before rendering
 currentFilter = 'all';
 renderList();
-
-// Handle return from DocuSign signing session
 (function handleSigningReturn(){
   const urlParams = new URLSearchParams(window.location.search);
   const signed = urlParams.get('signed');
@@ -2689,27 +2765,60 @@ renderList();
   }
 })();
 
+// ── ENVELOPE STATUS POLLING ──
+// Automatically check status of pending/in-progress envelopes every 30 seconds
+let pollingInterval = null;
+
+function startPolling(){
+  if(pollingInterval) return; // already polling
+  pollingInterval = setInterval(async () => {
+    const activeResidents = residents.filter(r =>
+      r.envelopeId && (r.sigStatus === 'pending' || r.sigStatus === 'in-progress')
+    );
+    for(const r of activeResidents){
+      await checkEnvelopeStatus(r);
+    }
+  }, 30000); // every 30 seconds
+}
+
+function stopPolling(){
+  if(pollingInterval){
+    clearInterval(pollingInterval);
+    pollingInterval = null;
+  }
+}
+
 // Check envelope status and update resident record
 async function checkEnvelopeStatus(r){
   if(!r.envelopeId) return;
   try{
     const data = await dsAPI('getEnvelope', { envelopeId: r.envelopeId });
-    console.log('Envelope status:', data.status);
+    console.log('Envelope status:', data.status, 'for', r.name);
 
     if(data.status === 'completed'){
       r.sigStatus = 'completed';
       r.sigPct    = 100;
       r.updated   = new Date().toISOString().split('T')[0];
       sessionStorage.removeItem('ds_signing_resident');
+      stopPolling();
       renderList();
-      showToast('✓ All signatures complete!');
-      // Auto-download the signed PDF
+      showToast(`✓ All signatures complete for ${r.name}!`);
       downloadSignedPDF(r);
-    } else if(data.status === 'sent' || data.status === 'delivered'){
+    } else if(data.status === 'sent'){
       r.sigStatus = 'pending';
+      r.sigPct    = 0;
       renderList();
-      showToast('Envelope sent — awaiting remaining signatures');
-      sessionStorage.removeItem('ds_signing_resident');
+    } else if(data.status === 'delivered'){
+      r.sigStatus = 'pending';
+      r.sigPct    = 25;
+      renderList();
+    } else if(data.status === 'declined' || data.status === 'voided'){
+      r.sigStatus  = 'not-started';
+      r.sigPct     = 0;
+      r.envelopeId = null;
+      stopPolling();
+      renderList();
+      showToast(`Envelope ${data.status} — start a new signing session`);
     }
   } catch(e){
     console.error('Status check failed:', e);
