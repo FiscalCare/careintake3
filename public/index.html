@@ -802,34 +802,45 @@ function formatDate(d){ if(!d)return'—'; const p=d.split('-'); return `${p[1]}
 function formatUpdated(d){ if(!d)return'—'; const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; const p=d.split('-'); return `${months[parseInt(p[1])-1]} ${parseInt(p[2])}, ${p[0]}`; }
 
 function overallStatus(r){
-  if(r.qStatus==='completed'&&r.sigStatus==='completed') return 'completed';
-  if(r.sigStatus==='pending') return 'pending';
-  if(r.qStatus==='in-progress'||r.sigStatus==='in-progress') return 'in-progress';
+  if(r.qStatus==='completed' && r.sigStatus==='completed') return 'completed';
+  if(r.qStatus==='completed' || r.sigStatus==='completed' || r.sigStatus==='pending' || r.sigStatus==='awaiting-spouse') return 'in-progress';
+  if(r.qStatus==='in-progress' || r.sigStatus==='in-progress') return 'in-progress';
   return 'not-started';
 }
 
-function statusBadge(s){
-  const map={'not-started':['badge-not-started','Not Started'],'in-progress':['badge-in-progress','In Progress'],'pending':['badge-pending','Sig. Pending'],'completed':['badge-completed','Completed']};
-  const [cls,label]=map[s]||map['not-started'];
-  return `<span class="badge ${cls}"><span class="badge-dot"></span>${label}</span>`;
+// Row accent color based on overall status
+function rowColor(r){
+  const s = overallStatus(r);
+  if(s === 'completed')   return '#10b981'; // green
+  if(s === 'in-progress') return '#f59e0b'; // orange
+  return '#ef4444';                          // red — not started
 }
-function maritalBadge(m){
-  const map={single:'badge-single',married:'badge-married',divorced:'badge-divorced',separated:'badge-separated',widowed:'badge-widowed'};
-  return `<span class="badge ${map[m]||'badge-single'}">${m.charAt(0).toUpperCase()+m.slice(1)}</span>`;
+
+function statusBadge(s){
+  const map={
+    'not-started': ['#ef4444','Not Started'],
+    'in-progress': ['#f59e0b','In Progress'],
+    'pending':     ['#f59e0b','Sig. Pending'],
+    'awaiting-spouse': ['#f59e0b','Awaiting Spouse'],
+    'completed':   ['#10b981','Completed'],
+  };
+  const [color, label] = map[s] || map['not-started'];
+  return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:${color}">
+    <span style="width:6px;height:6px;border-radius:50%;background:${color};flex-shrink:0"></span>${label}</span>`;
 }
 
 // ── SIGNATURE BUTTON LABELS ──
 function sigBtnLabel(r){
-  if(r.sigStatus==='completed')        return {label:'View Signed',       cls:'sig-done', disabled:false};
-  if(r.sigStatus==='awaiting-spouse')  return {label:'Awaiting Spouse',   cls:'sig-sent', disabled:false};
-  if(r.sigStatus==='pending')          return {label:'In Progress',       cls:'sig-sent', disabled:false};
-  if(r.sigStatus==='in-progress')      return {label:'Continue',          cls:'sig-sent', disabled:false};
-  return                                      {label:'Start Signatures', cls:'',         disabled:false};
+  if(r.sigStatus==='completed')        return {label:'Signatures Complete', cls:'sig-done', disabled:false};
+  if(r.sigStatus==='awaiting-spouse')  return {label:'Awaiting Spouse',     cls:'sig-sent', disabled:false};
+  if(r.sigStatus==='pending')          return {label:'In Progress',         cls:'sig-sent', disabled:false};
+  if(r.sigStatus==='in-progress')      return {label:'Continue',            cls:'sig-sent', disabled:false};
+  return                                      {label:'Start Signatures',    cls:'',         disabled:false};
 }
 function qBtnLabel(r){
-  if(r.qStatus==='completed') return {label:'Review Form',cls:'review',icon:'👁'};
-  if(r.qStatus==='in-progress') return {label:'Resume',cls:'resume',icon:'▶'};
-  return {label:'Start Form',cls:'',icon:'✦'};
+  if(r.qStatus==='completed')   return {label:'Questionnaire Complete', cls:'review'};
+  if(r.qStatus==='in-progress') return {label:'Resume',                 cls:'resume'};
+  return                               {label:'Start Form',             cls:''};
 }
 
 // ══════════════════════════════════════════
@@ -855,6 +866,7 @@ function renderList(){
 
   list.innerHTML = filtered.map(r=>{
     const status = overallStatus(r);
+    const color  = rowColor(r);
     const [bg] = avatarColors[r.colorIdx%avatarColors.length];
     const q = qBtnLabel(r);
     const s = sigBtnLabel(r);
@@ -862,7 +874,7 @@ function renderList(){
       ? 'disabled title="Complete questionnaire first"'
       : `onclick="openSigningModal('${r.id}')"`;
     return `
-    <div class="table-row" onclick="openProfile('${r.id}')">
+    <div class="table-row" onclick="openProfile('${r.id}')" style="border-left:3px solid ${color}">
       <div class="resident-name">
         <div class="res-avatar" style="background:${bg};color:#fff">${initials(r.name)}</div>
         <div>
@@ -871,8 +883,8 @@ function renderList(){
         </div>
       </div>
       <div>${statusBadge(status)}</div>
-      <div>${maritalBadge(r.marital)}</div>
-      <div class="col-text">${r.county}</div>
+      <div style="font-size:12px;color:#94a3b8">${r.marital.charAt(0).toUpperCase()+r.marital.slice(1)}</div>
+      <div style="font-size:12px;color:#94a3b8">${r.county}</div>
       <div class="last-updated">${formatUpdated(r.updated)}</div>
       <div class="row-actions" onclick="event.stopPropagation()">
         <button class="btn-start-q ${q.cls}" onclick="launchQuestionnaire('${r.id}')">
@@ -1095,6 +1107,8 @@ async function _resumeSpouseSigningSession(r){
     console.log('Spouse recipient id:', recipientId);
 
     const spouseName = residentSigningState[r.id]?.spouseName || r.spouseName || 'Spouse';
+    // Keep ds_signing_resident set so portal knows who this is on return
+    sessionStorage.setItem('ds_signing_resident', r.id);
     sessionStorage.setItem('ds_signing_role', 'Spouse');
     const viewData = await dsAPI('recipientView', {
       envelopeId: r.envelopeId,
@@ -2854,29 +2868,41 @@ renderList();
         r.updated    = new Date().toISOString().split('T')[0];
 
         if(event === 'signing_complete'){
-          // Check if this was the resident signing for a married couple
           const signingRole = sessionStorage.getItem('ds_signing_role') || 'Resident';
           if(r.marital === 'married' && signingRole !== 'Spouse'){
-            // Resident signed — now need spouse to sign
+            // Resident signed — automatically open spouse session
             r.sigStatus = 'awaiting-spouse';
             r.updated   = new Date().toISOString().split('T')[0];
-            sessionStorage.removeItem('ds_signing_resident');
-            sessionStorage.removeItem('ds_signing_role');
             renderList();
-            showToast(`✓ Resident signed — spouse signature needed`);
+            showToast('✓ Resident signed — opening spouse signing session...');
+            // Auto-open spouse session immediately
+            setTimeout(() => _resumeSpouseSigningSession(r), 1000);
+            sessionStorage.removeItem('ds_signing_role');
           } else {
-            // All done — check envelope status
             checkEnvelopeStatus(r);
           }
         } else if(event === 'cancel' || event === 'decline'){
-          r.sigStatus = 'in-progress';
-          renderList();
-          showToast('Signing cancelled — click Signatures to resume');
-          sessionStorage.removeItem('ds_signing_resident');
+          const signingRole = sessionStorage.getItem('ds_signing_role') || 'Resident';
+          if(r.marital === 'married' && signingRole === 'Spouse'){
+            // Spouse cancelled — stay as awaiting-spouse
+            r.sigStatus = 'awaiting-spouse';
+            renderList();
+            showToast('Spouse signing cancelled — click "Awaiting Spouse" to reopen');
+          } else {
+            r.sigStatus = 'in-progress';
+            renderList();
+            showToast('Signing cancelled — click "In Progress" to resume');
+          }
+          sessionStorage.removeItem('ds_signing_role');
         } else {
-          r.sigStatus = 'pending';
+          // Session ended without explicit event — check what role was signing
+          const signingRole = sessionStorage.getItem('ds_signing_role') || 'Resident';
+          if(r.marital === 'married' && signingRole === 'Spouse'){
+            r.sigStatus = 'awaiting-spouse';
+          } else {
+            r.sigStatus = 'pending';
+          }
           renderList();
-          showToast('Signing session ended — checking status...');
           checkEnvelopeStatus(r);
         }
       }
