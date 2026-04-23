@@ -1385,6 +1385,11 @@ async function sendSignatureEnvelope(){
 
     for(const signer of inPersonSigners){
       const signerEmail = `embedded.${signer.role.toLowerCase().replace(/[^a-z0-9]/g,'')}@careintake.local`;
+
+      // Open window BEFORE the async call to avoid popup blocker
+      const signingWindow = window.open('', '_blank');
+      if(signingWindow) signingWindow.document.write('<p style="font-family:sans-serif;padding:40px">Opening DocuSign signing session...</p>');
+
       const viewData = await dsAPI('recipientView', {
         envelopeId,
         viewRequest: {
@@ -1398,9 +1403,10 @@ async function sendSignatureEnvelope(){
       });
 
       if(viewData.url){
-        window.open(viewData.url, '_blank');
+        if(signingWindow) signingWindow.location.href = viewData.url;
         showToast(`Signing opened for ${signer.name} — new tab`);
       } else {
+        if(signingWindow) signingWindow.close();
         showToast(`Could not get signing URL: ${viewData.message||'unknown error'}`);
         console.error('Recipient view error:', viewData);
       }
