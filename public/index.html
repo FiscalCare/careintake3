@@ -1465,6 +1465,19 @@ async function sendSignatureEnvelope(){
     r.envelopeId = envelopeId;
     console.log('Envelope created:', envelopeId);
 
+    // Build a map of actual recipientIds from DocuSign's response
+    // DocuSign may assign different IDs than what we sent
+    const actualRecipientIds = {};
+    const allEnvRecipients = [
+      ...(envData._recipients?.inPersonSigners || []),
+      ...(envData._recipients?.signers || []),
+    ];
+    allEnvRecipients.forEach(rec => {
+      if(rec.roleName) actualRecipientIds[rec.roleName] = rec.recipientId;
+      if(rec.clientUserId) actualRecipientIds[rec.clientUserId] = rec.recipientId;
+    });
+    console.log('Actual recipient IDs:', actualRecipientIds);
+
     // Start polling for status updates every 30 seconds
     startPolling();
 
@@ -1477,8 +1490,16 @@ async function sendSignatureEnvelope(){
     // For in-person signing, open DocuSign in a new tab
     if(inPersonSigners.length > 0){
       const signer = inPersonSigners[0];
-      const signerEmail = `embedded.${signer.role.toLowerCase().replace(/[^a-z0-9]/g,'')}@careintake.local`;
+      const role = signer.role;
+      // Use actual recipientId from DocuSign response, fall back to our assigned ID
+      const clientUserId = `${r.id}-${role}`;
+      const recipientId = actualRecipientIds[role]
+        || actualRecipientIds[clientUserId]
+        || actualRecipientIds['Resident']
+        || roleToId[role]
+        || '1';
 
+      console.log('Using recipientId:', recipientId, 'for role:', role);
       sessionStorage.setItem('ds_signing_resident', r.id);
 
       const viewData = await dsAPI('recipientView', {
@@ -1488,8 +1509,8 @@ async function sendSignatureEnvelope(){
           authenticationMethod: 'none',
           email:                DS_CONFIG.bom.email,
           userName:             DS_CONFIG.bom.name,
-          clientUserId:         `${r.id}-${signer.role}`,
-          recipientId:          roleToId[signer.role] || '1',
+          clientUserId,
+          recipientId,
         }
       });
 
