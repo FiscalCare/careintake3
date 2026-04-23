@@ -573,8 +573,8 @@ body { font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden
     </nav>
     <div class="sidebar-footer">
       <div class="user-card">
-        <div class="avatar">SL</div>
-        <div><div class="user-name">Sarah Levine</div><div class="user-role">Business Office Manager</div></div>
+        <div class="avatar">LZ</div>
+        <div><div class="user-name">Leeba Zohn</div><div class="user-role">Business Office Manager</div></div>
       </div>
     </div>
   </aside>
@@ -920,10 +920,9 @@ const DS_CONFIG = {
   facilityAddress: '123 Care Lane, Nassau, NY 11001',
 
   // BOM info — used as host for in-person signing sessions
-  // Update these when you go live or add a login system
   bom: {
-    name:  'Sarah Levine',
-    email: 'sarah.levine@sunrisecare.com',
+    name:  'Leeba Zohn',
+    email: 'lzohn@fiscalcareservices.com',
   },
 };
 
@@ -1404,15 +1403,14 @@ async function sendSignatureEnvelope(){
       const signerEmail = `embedded.${signer.role.toLowerCase().replace(/[^a-z0-9]/g,'')}@careintake.local`;
 
       sessionStorage.setItem('ds_signing_resident', r.id);
-      sessionStorage.setItem('ds_signing_role', signer.role);
 
       const viewData = await dsAPI('recipientView', {
         envelopeId,
         viewRequest: {
           returnUrl:            DS_CONFIG.redirectUri + `?signed=${envelopeId}`,
           authenticationMethod: 'none',
-          email:                signerEmail,
-          userName:             signer.name,
+          email:                DS_CONFIG.bom.email,
+          userName:             DS_CONFIG.bom.name,
           clientUserId:         `${r.id}-${signer.role}`,
           recipientId:          roleToId[signer.role] || '1',
         }
