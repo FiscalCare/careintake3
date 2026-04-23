@@ -820,10 +820,10 @@ function maritalBadge(m){
 
 // ── SIGNATURE BUTTON LABELS ──
 function sigBtnLabel(r){
-  if(r.sigStatus==='completed')   return {label:'View Signed', cls:'sig-done',  disabled:false};
-  if(r.sigStatus==='pending')     return {label:'Track',       cls:'sig-sent',  disabled:false};
-  if(r.sigStatus==='in-progress') return {label:'Continue',    cls:'sig-sent',  disabled:false};
-  return                                 {label:'Signatures',  cls:'',          disabled:false};
+  if(r.sigStatus==='completed')   return {label:'View Signed',  cls:'sig-done', disabled:false};
+  if(r.sigStatus==='pending')     return {label:'In Progress',  cls:'sig-sent', disabled:false};
+  if(r.sigStatus==='in-progress') return {label:'Continue',     cls:'sig-sent', disabled:false};
+  return                                 {label:'Signatures',   cls:'',         disabled:false};
 }
 function qBtnLabel(r){
   if(r.qStatus==='completed') return {label:'Review Form',cls:'review',icon:'👁'};
@@ -1035,10 +1035,24 @@ function buildCoreRecipients(r, includeSpouse = false){
 async function _resumeSigningSession(r){
   if(!r.envelopeId) return;
   const role = dsState.primaryType === 'rep' ? 'Representative' : 'Resident';
-  const signerEmail = `embedded.${role.toLowerCase().replace(/[^a-z0-9]/g,'')}@careintake.local`;
+  const clientUserId = `${r.id}-${role}`;
 
   showToast('Reopening signing session...');
   try{
+    // Fetch actual recipients to get correct recipientId
+    const recipientsData = await dsAPI('getRecipients', { envelopeId: r.envelopeId });
+    const allRecs = [
+      ...(recipientsData.inPersonSigners || []),
+      ...(recipientsData.signers || []),
+    ];
+    const matchedRec = allRecs.find(rec =>
+      rec.clientUserId === clientUserId ||
+      rec.roleName === role ||
+      rec.roleName === 'Resident'
+    );
+    const recipientId = matchedRec?.recipientId || '1';
+    console.log('Resuming — matched:', matchedRec?.roleName, 'id:', recipientId);
+
     const viewData = await dsAPI('recipientView', {
       envelopeId: r.envelopeId,
       viewRequest: {
@@ -1046,18 +1060,19 @@ async function _resumeSigningSession(r){
         authenticationMethod: 'none',
         email:                DS_CONFIG.bom.email,
         userName:             DS_CONFIG.bom.name,
-        clientUserId:         `${r.id}-${role}`,
-        recipientId:          '1',
+        clientUserId,
+        recipientId,
       }
     });
     if(viewData.url){
       const win = window.open(viewData.url, '_blank');
       if(!win) window.location.href = viewData.url;
     } else {
-      showToast(`Could not resume: ${viewData.message || 'unknown error'}`);
+      showToast(`Could not reopen: ${viewData.message || 'unknown error'}`);
+      console.error('Resume error:', viewData);
     }
   } catch(e){
-    showToast('Could not resume signing session');
+    showToast('Could not reopen signing session');
     console.error(e);
   }
 }
@@ -1078,16 +1093,10 @@ function openSigningModal(id){
     return;
   }
 
-  // If pending or in-progress with existing envelope — check status and offer resume
+  // If pending or in-progress with existing envelope — reopen the signing session
   if((r.sigStatus === 'pending' || r.sigStatus === 'in-progress') && r.envelopeId){
-    checkEnvelopeStatus(r);
-    // Also offer to resume signing if in-progress
-    if(r.sigStatus === 'in-progress'){
-      sessionStorage.setItem('ds_signing_resident', r.id);
-      _resumeSigningSession(r);
-      return;
-    }
-    showToast('Checking signature status...');
+    sessionStorage.setItem('ds_signing_resident', r.id);
+    _resumeSigningSession(r);
     return;
   }
 
