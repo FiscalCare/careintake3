@@ -44,6 +44,20 @@ module.exports = async (req, res) => {
         `/restapi/v2.1/accounts/${ACCOUNT_ID}/envelopes`,
         token, body.envelope
       );
+      console.log('Envelope created:', envResp.data.envelopeId, 'status:', envResp.data.status);
+      // Also fetch recipients to log their IDs
+      if(envResp.data.envelopeId){
+        const recResp = await apiRequest('GET',
+          `/restapi/v2.1/accounts/${ACCOUNT_ID}/envelopes/${envResp.data.envelopeId}/recipients`,
+          token, null
+        );
+        console.log('Recipients:', JSON.stringify(recResp.data).substring(0, 500));
+        // Return recipients alongside envelope data so portal can use correct IDs
+        return res.status(envResp.status).json({
+          ...envResp.data,
+          _recipients: recResp.data,
+        });
+      }
       return res.status(envResp.status).json(envResp.data);
     }
 
