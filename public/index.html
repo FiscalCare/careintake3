@@ -1463,7 +1463,10 @@ async function sendSignatureEnvelope(){
 
     const envelopeId = envData.envelopeId;
     r.envelopeId = envelopeId;
+    r.sigStatus  = 'pending';
+    r.updated    = new Date().toISOString().split('T')[0];
     console.log('Envelope created:', envelopeId);
+    renderList(); // update dashboard immediately
 
     // Build a map of actual recipientIds from DocuSign's response
     // DocuSign may assign different IDs than what we sent
