@@ -1094,6 +1094,7 @@ async function _resumeSpouseSigningSession(r){
     const recipientId = matchedRec?.recipientId || '2';
     console.log('Spouse recipient id:', recipientId);
 
+    const spouseName = residentSigningState[r.id]?.spouseName || r.spouseName || 'Spouse';
     sessionStorage.setItem('ds_signing_role', 'Spouse');
     const viewData = await dsAPI('recipientView', {
       envelopeId: r.envelopeId,
@@ -1289,12 +1290,13 @@ function _openFullSigningModal(r){
 
   // Restore previous state for this resident, or default to resident signing
   const saved = residentSigningState[r.id];
-  dsState.primaryType   = saved?.primaryType   || 'self'; // always default to resident
+  dsState.primaryType   = saved?.primaryType   || 'self';
   dsState.primaryMethod = saved?.primaryMethod || 'inperson';
   dsState.primaryEmail  = saved?.primaryEmail  || r.residentEmail || '';
   dsState.repName       = saved?.repName       || r.repName || '';
   dsState.spouseMethod  = saved?.spouseMethod  || 'email';
   dsState.spouseEmail   = saved?.spouseEmail   || r.spouseEmail || '';
+  dsState.spouseName    = saved?.spouseName    || r.spouseName  || '';
 
   document.getElementById('ds-spouse-section').style.display = isMarried ? 'block' : 'none';
 
@@ -1306,6 +1308,8 @@ function _openFullSigningModal(r){
   if(repInput) repInput.value = dsState.repName;
   const spEmail = document.getElementById('ds-spouse-email');
   if(spEmail) spEmail.value = dsState.spouseEmail;
+  const spName = document.getElementById('ds-spouse-name');
+  if(spName) spName.value = dsState.spouseName;
 
   updateDocTags();
 
@@ -1432,7 +1436,8 @@ async function sendSignatureEnvelope(){
     },
   ];
   if(isMarried){
-    allRecipients.push({ role:'Spouse', name: r.spouseName||'Spouse', email: spouseEmail, method: dsState.spouseMethod });
+    const spouseName = document.getElementById('ds-spouse-name')?.value || dsState.spouseName || 'Spouse';
+    allRecipients.push({ role:'Spouse', name: spouseName, email: spouseEmail, method: dsState.spouseMethod });
   }
 
   // For core templates, rep signs as 'Resident' role
@@ -3131,6 +3136,10 @@ async function downloadSignedPDF(r){
       <!-- Spouse section — shown only if married -->
       <div id="ds-spouse-section" style="display:none;margin-top:18px;padding-top:18px;border-top:1px solid rgba(255,255,255,0.09)">
         <div class="ds-section-label">Spouse signing</div>
+        <div style="margin-bottom:12px">
+          <div class="ds-email-label" style="margin-bottom:6px">Spouse full name</div>
+          <input class="ds-email-input" type="text" id="ds-spouse-name" placeholder="Spouse's full name" oninput="dsState.spouseName=this.value">
+        </div>
         <div style="display:flex;gap:8px;margin-bottom:10px">
           <button class="ds-method-btn" id="ds-sm-inperson" onclick="dsSetSpouseMethod('inperson')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
