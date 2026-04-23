@@ -1384,16 +1384,16 @@ async function sendSignatureEnvelope(){
     closeSigningModal();
 
     for(const signer of inPersonSigners){
-      // Get signing URL via Netlify proxy
+      const signerEmail = `embedded.${signer.role.toLowerCase().replace(/[^a-z0-9]/g,'')}@careintake.local`;
       const viewData = await dsAPI('recipientView', {
         envelopeId,
         viewRequest: {
           returnUrl:            DS_CONFIG.redirectUri + `?signed=${envelopeId}`,
           authenticationMethod: 'none',
-          email:                `embedded-${signer.role.toLowerCase().replace(/\s/g,'')}@careintake.local`,
+          email:                signerEmail,
           userName:             signer.name,
           clientUserId:         `${r.id}-${signer.role}`,
-          recipientId:          String(allRecipients.findIndex(a=>a.role===signer.role)+1),
+          recipientId:          roleToId[signer.role] || '1',
         }
       });
 
