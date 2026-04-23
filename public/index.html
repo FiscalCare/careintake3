@@ -1437,7 +1437,7 @@ async function sendSignatureEnvelope(){
                 roleName:     rec.role,
                 recipientId:  roleToId[recFull.role] || String(ri + 1),
                 signerName:   recFull.name || rec.name,
-                signerEmail:  email,
+                signerEmail:  DS_CONFIG.bom.email,
                 hostName:     DS_CONFIG.bom.name,
                 hostEmail:    DS_CONFIG.bom.email,
                 clientUserId: `${r.id}-${rec.role}`,
@@ -1498,24 +1498,31 @@ async function sendSignatureEnvelope(){
 
       sessionStorage.setItem('ds_signing_resident', r.id);
 
-      // First fetch the actual recipients from DocuSign to get correct recipientId
-      const recipientsData = await dsAPI('getRecipients', { envelopeId });
-      console.log('Recipients data:', JSON.stringify(recipientsData).substring(0, 800));
-
-      // Find our recipient by clientUserId
+      // Use _recipients from envelope creation response if available
       const allRecs = [
+        ...(envData._recipients?.inPersonSigners || []),
+        ...(envData._recipients?.signers || []),
+      ];
+
+      // If not in envelope response, fetch separately
+      let recipientsData = { inPersonSigners: allRecs, signers: [] };
+      if(allRecs.length === 0){
+        recipientsData = await dsAPI('getRecipients', { envelopeId });
+      }
+
+      const allRecsList = [
         ...(recipientsData.inPersonSigners || []),
         ...(recipientsData.signers || []),
       ];
-      console.log('All recipients:', allRecs.map(r => ({role: r.roleName, id: r.recipientId, cuid: r.clientUserId})));
+      console.log('Recipients:', allRecsList.map(r => ({role: r.roleName, id: r.recipientId, cuid: r.clientUserId})));
 
-      const matchedRec = allRecs.find(rec =>
+      const matchedRec = allRecsList.find(rec =>
         rec.clientUserId === clientUserId ||
         rec.roleName === role ||
         rec.roleName === 'Resident'
       );
       const recipientId = matchedRec?.recipientId || '1';
-      console.log('Matched recipient:', matchedRec?.roleName, 'recipientId:', recipientId);
+      console.log('Using recipientId:', recipientId);
 
       const viewData = await dsAPI('recipientView', {
         envelopeId,
