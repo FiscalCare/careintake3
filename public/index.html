@@ -820,9 +820,10 @@ function maritalBadge(m){
 
 // ── SIGNATURE BUTTON LABELS ──
 function sigBtnLabel(r){
-  if(r.sigStatus==='completed') return {label:'Signed',    cls:'sig-done', disabled:false};
-  if(r.sigStatus==='pending')   return {label:'Track',     cls:'sig-sent', disabled:false};
-  return                               {label:'Signatures',cls:'',          disabled:false};
+  if(r.sigStatus==='completed')   return {label:'View Signed', cls:'sig-done',  disabled:false};
+  if(r.sigStatus==='pending')     return {label:'Track',       cls:'sig-sent',  disabled:false};
+  if(r.sigStatus==='in-progress') return {label:'Continue',    cls:'sig-sent',  disabled:false};
+  return                                 {label:'Signatures',  cls:'',          disabled:false};
 }
 function qBtnLabel(r){
   if(r.qStatus==='completed') return {label:'Review Form',cls:'review',icon:'👁'};
@@ -1027,9 +1028,36 @@ function buildCoreRecipients(r, includeSpouse = false){
   return recipients;
 }
 
-// ══════════════════════════════════════════
-//  PRE-SIGNING INTAKE PROMPT
-// ══════════════════════════════════════════
+// Resume an existing signing session
+async function _resumeSigningSession(r){
+  if(!r.envelopeId) return;
+  const role = dsState.primaryType === 'rep' ? 'Representative' : 'Resident';
+  const signerEmail = `embedded.${role.toLowerCase().replace(/[^a-z0-9]/g,'')}@careintake.local`;
+
+  showToast('Reopening signing session...');
+  try{
+    const viewData = await dsAPI('recipientView', {
+      envelopeId: r.envelopeId,
+      viewRequest: {
+        returnUrl:            DS_CONFIG.redirectUri + `?signed=${r.envelopeId}`,
+        authenticationMethod: 'none',
+        email:                DS_CONFIG.bom.email,
+        userName:             DS_CONFIG.bom.name,
+        clientUserId:         `${r.id}-${role}`,
+        recipientId:          '1',
+      }
+    });
+    if(viewData.url){
+      const win = window.open(viewData.url, '_blank');
+      if(!win) window.location.href = viewData.url;
+    } else {
+      showToast(`Could not resume: ${viewData.message || 'unknown error'}`);
+    }
+  } catch(e){
+    showToast('Could not resume signing session');
+    console.error(e);
+  }
+}
 let psAnswers = {}; // { marital, county, signer, veteran }
 let signingResident = null;
 
@@ -1038,23 +1066,38 @@ function openSigningModal(id){
   if(!r) return;
   signingResident = r;
 
-  // If questionnaire is complete, we have everything — go straight to signing modal
-  if(r.qStatus === 'completed'){
-    _openFullSigningModal(r);
+  // If completed — download/view the signed PDF
+  if(r.sigStatus === 'completed' && r.signedPdfUrl){
+    const a = document.createElement('a');
+    a.href = r.signedPdfUrl;
+    a.download = `${r.name.replace(/\s+/g,'-')}-Signed-Documents.pdf`;
+    a.click();
     return;
   }
 
-  // Otherwise check if the 4 key fields are already known from the resident record
-  // (they are always set when the resident is created — marital, county, veteran, signer)
-  // If all 4 are known, skip the prompt entirely
-  const hasAll = r.marital && r.county && r.signer && r.veteran;
-  if(hasAll){
-    _openFullSigningModal(r);
+  // If pending or in-progress with existing envelope — check status and offer resume
+  if((r.sigStatus === 'pending' || r.sigStatus === 'in-progress') && r.envelopeId){
+    checkEnvelopeStatus(r);
+    // Also offer to resume signing if in-progress
+    if(r.sigStatus === 'in-progress'){
+      sessionStorage.setItem('ds_signing_resident', r.id);
+      _resumeSigningSession(r);
+      return;
+    }
+    showToast('Checking signature status...');
     return;
   }
 
-  // Show the pre-signing intake prompt for any missing fields
-  _openPresignPrompt(r);
+  // New signing — check if we need the pre-signing prompt
+  if(r.qStatus !== 'completed'){
+    const hasAll = r.marital && r.county && r.signer && r.veteran;
+    if(!hasAll){
+      _openPresignPrompt(r);
+      return;
+    }
+  }
+
+  _openFullSigningModal(r);
 }
 
 function _openPresignPrompt(r){
@@ -2617,22 +2660,94 @@ renderList();
 (function handleSigningReturn(){
   const urlParams = new URLSearchParams(window.location.search);
   const signed = urlParams.get('signed');
+  const event  = urlParams.get('event');
   if(signed){
     window.history.replaceState({}, '', window.location.pathname);
     const residentId = sessionStorage.getItem('ds_signing_resident');
     if(residentId){
-      sessionStorage.removeItem('ds_signing_resident');
-      sessionStorage.removeItem('ds_signing_role');
       const r = residents.find(x => x.id === residentId);
       if(r){
-        r.sigStatus = 'pending';
-        r.updated   = new Date().toISOString().split('T')[0];
-        renderList();
-        showToast('Signing complete — envelope sent!');
+        r.envelopeId = signed;
+        r.updated    = new Date().toISOString().split('T')[0];
+
+        if(event === 'signing_complete'){
+          // Check if ALL recipients have signed by polling envelope status
+          checkEnvelopeStatus(r);
+        } else if(event === 'cancel' || event === 'decline'){
+          r.sigStatus = 'in-progress';
+          renderList();
+          showToast('Signing cancelled — click Signatures to resume');
+          sessionStorage.removeItem('ds_signing_resident');
+        } else {
+          r.sigStatus = 'pending';
+          renderList();
+          showToast('Signing session ended — checking status...');
+          checkEnvelopeStatus(r);
+        }
       }
     }
   }
 })();
+
+// Check envelope status and update resident record
+async function checkEnvelopeStatus(r){
+  if(!r.envelopeId) return;
+  try{
+    const data = await dsAPI('getEnvelope', { envelopeId: r.envelopeId });
+    console.log('Envelope status:', data.status);
+
+    if(data.status === 'completed'){
+      r.sigStatus = 'completed';
+      r.sigPct    = 100;
+      r.updated   = new Date().toISOString().split('T')[0];
+      sessionStorage.removeItem('ds_signing_resident');
+      renderList();
+      showToast('✓ All signatures complete!');
+      // Auto-download the signed PDF
+      downloadSignedPDF(r);
+    } else if(data.status === 'sent' || data.status === 'delivered'){
+      r.sigStatus = 'pending';
+      renderList();
+      showToast('Envelope sent — awaiting remaining signatures');
+      sessionStorage.removeItem('ds_signing_resident');
+    }
+  } catch(e){
+    console.error('Status check failed:', e);
+  }
+}
+
+// Download compiled signed PDF and store reference
+async function downloadSignedPDF(r){
+  if(!r.envelopeId) return;
+  try{
+    showToast('Downloading signed documents...');
+    const data = await dsAPI('getDocuments', { envelopeId: r.envelopeId });
+    if(data.pdf){
+      // Convert base64 to blob and trigger download
+      const bytes  = atob(data.pdf);
+      const array  = new Uint8Array(bytes.length);
+      for(let i = 0; i < bytes.length; i++) array[i] = bytes.charCodeAt(i);
+      const blob   = new Blob([array], { type: 'application/pdf' });
+      const url    = URL.createObjectURL(blob);
+
+      // Store the blob URL on the resident for profile display
+      r.signedPdfUrl = url;
+      r.signedPdfDate = new Date().toLocaleDateString();
+
+      // Auto-download
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${r.name.replace(/\s+/g,'-')}-Signed-Documents.pdf`;
+      a.click();
+
+      renderList();
+      showToast('✓ Signed documents downloaded!');
+    }
+  } catch(e){
+    console.error('PDF download failed:', e);
+    showToast('Could not download PDF — check DocuSign account');
+  }
+}
 </script>
 <!-- PRE-SIGNING INTAKE PROMPT -->
 <div class="ps-modal-overlay" id="ps-modal-overlay">
