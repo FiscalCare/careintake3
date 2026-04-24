@@ -1169,17 +1169,23 @@ let psAnswers = {}; // { marital, county, signer, veteran }
 let signingResident = null;
 
 function openSigningModal(id){
+  console.log('openSigningModal called with id:', id);
   try{
   const r = residents.find(x=>x.id===id);
   if(!r) return;
   signingResident = r;
 
-  // If completed — download/view the signed PDF
-  if(r.sigStatus === 'completed' && r.signedPdfUrl){
-    const a = document.createElement('a');
-    a.href = r.signedPdfUrl;
-    a.download = `${r.name.replace(/\s+/g,'-')}-Signed-Documents.pdf`;
-    a.click();
+  // If completed — show PDF if available, no API calls needed
+  if(r.sigStatus === 'completed'){
+    if(r.signedPdfUrl){
+      const a = document.createElement('a');
+      a.href = r.signedPdfUrl;
+      a.download = `${r.name.replace(/\s+/g,'-')}-Signed-Documents.pdf`;
+      a.click();
+      showToast('Downloading signed documents...');
+    } else {
+      showToast('All signatures complete ✓');
+    }
     return;
   }
 
@@ -3114,7 +3120,9 @@ function startPolling(){
   if(pollingInterval) return; // already polling
   pollingInterval = setInterval(async () => {
     const activeResidents = residents.filter(r =>
-      r.envelopeId && (r.sigStatus === 'pending' || r.sigStatus === 'in-progress')
+      r.envelopeId &&
+      r.sigStatus !== 'completed' &&
+      (r.sigStatus === 'pending' || r.sigStatus === 'in-progress' || r.sigStatus === 'awaiting-spouse')
     );
     for(const r of activeResidents){
       await checkEnvelopeStatus(r);
