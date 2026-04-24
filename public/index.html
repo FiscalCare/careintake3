@@ -995,8 +995,7 @@ function getSignaturePackage(r){
   });
 
   // 2. Submission on behalf — only if rep is actually signing
-  // dsState.primaryType reflects what the BOM selected in the modal
-  const repIsSigning = dsState.primaryType === 'rep';
+  const repIsSigning = (typeof dsState !== 'undefined') && dsState.primaryType === 'rep';
   if(repIsSigning){
     pkg.push({
       id: DS_CONFIG.templates.submissionBehalf,
@@ -1064,9 +1063,10 @@ function getSignaturePackage(r){
 
 function buildCoreRecipients(r, includeSpouse = false){
   const recipients = [];
-  // Use dsState.primaryType to determine who is actually signing right now
-  if(dsState.primaryType === 'rep'){
-    recipients.push({ role:'Representative', name: dsState.repName||r.repName||'Representative', email: r.repEmail||'' });
+  // Safe access to dsState — may not be initialized yet on first call
+  const primaryType = (typeof dsState !== 'undefined' ? dsState.primaryType : null) || 'self';
+  if(primaryType === 'rep'){
+    recipients.push({ role:'Representative', name: dsState?.repName||r.repName||'Representative', email: r.repEmail||'' });
   } else {
     recipients.push({ role:'Resident', name: r.name, email: r.residentEmail||'' });
   }
@@ -1169,6 +1169,7 @@ let psAnswers = {}; // { marital, county, signer, veteran }
 let signingResident = null;
 
 function openSigningModal(id){
+  try{
   const r = residents.find(x=>x.id===id);
   if(!r) return;
   signingResident = r;
@@ -1206,6 +1207,10 @@ function openSigningModal(id){
   }
 
   _openFullSigningModal(r);
+  } catch(e){
+    console.error('openSigningModal error:', e);
+    showToast('Error: ' + e.message);
+  }
 }
 
 function _openPresignPrompt(r){
