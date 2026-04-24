@@ -129,8 +129,8 @@ body { font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden
 
 /* TABLE */
 .table-wrap { background: #132033; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; overflow: hidden; }
-.table-head { display: grid; grid-template-columns: 2fr 1.1fr .9fr .9fr 1.1fr 220px; padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.09); font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: #64748b; font-weight: 500; }
-.table-row { display: grid; grid-template-columns: 2fr 1.1fr .9fr .9fr 1.1fr 220px; padding: 13px 20px; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.07); cursor: pointer; transition: background .12s; }
+.table-head { display: grid; grid-template-columns: 1.8fr .9fr .8fr .8fr .9fr 260px; padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.09); font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: #64748b; font-weight: 500; }
+.table-row { display: grid; grid-template-columns: 1.8fr .9fr .8fr .8fr .9fr 260px; padding: 13px 20px; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.07); cursor: pointer; transition: background .12s; }
 .table-row:last-child { border-bottom: none; }
 .table-row:hover { background: rgba(255,255,255,0.04); }
 
@@ -157,6 +157,9 @@ body { font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden
 
 .col-text { font-size: 13px; color: #94a3b8; }
 .last-updated { font-size: 11px; color: #64748b; }
+.profile-edit-input { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09); border-radius: 7px; color: #f0f4f8; font-family: 'DM Sans',sans-serif; font-size: 13px; padding: 8px 12px; outline: none; transition: border .15s; }
+.profile-edit-input:focus { border-color: #3b82f6; background: rgba(59,130,246,0.06); }
+.profile-edit-input option { background: #1a2e45; color: #f0f4f8; }
 
 /* ROW ACTIONS — the key new area */
 .row-actions { display: flex; align-items: center; gap: 5px; justify-content: flex-end; }
@@ -166,10 +169,10 @@ body { font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden
   padding: 6px 10px; border-radius: 6px;
   font-family: 'DM Sans',sans-serif; font-size: 12px; font-weight: 600;
   cursor: pointer; transition: all .15s; white-space: nowrap;
-  background: rgba(139,92,246,0.15); color: #a78bfa;
-  border: 1px solid rgba(139,92,246,0.3);
+  background: rgba(239,68,68,0.15); color: #f87171;
+  border: 1px solid rgba(239,68,68,0.3);
 }
-.btn-start-sig:hover { background: #8b5cf6; color: #fff; border-color: #8b5cf6; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(139,92,246,0.35); }
+.btn-start-sig:hover { background: #ef4444; color: #fff; border-color: #ef4444; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(239,68,68,0.35); }
 .btn-start-sig.sig-sent { background: rgba(245,158,11,0.12); color: #fbbf24; border-color: rgba(245,158,11,0.3); }
 .btn-start-sig.sig-sent:hover { background: #f59e0b; color: #fff; border-color: #f59e0b; }
 .btn-start-sig.sig-done { background: rgba(16,185,129,0.12); color: #34d399; border-color: rgba(16,185,129,0.3); }
@@ -265,10 +268,10 @@ body { font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden
   padding: 6px 11px; border-radius: 6px;
   font-family: 'DM Sans',sans-serif; font-size: 12px; font-weight: 600;
   cursor: pointer; border: none; transition: all .15s; white-space: nowrap;
-  background: rgba(59,130,246,0.15); color: #60a5fa;
-  border: 1px solid rgba(59,130,246,0.3);
+  background: rgba(239,68,68,0.15); color: #f87171;
+  border: 1px solid rgba(239,68,68,0.3);
 }
-.btn-start-q:hover { background: #3b82f6; color: #fff; border-color: #3b82f6; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(59,130,246,0.35); }
+.btn-start-q:hover { background: #ef4444; color: #fff; border-color: #ef4444; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(239,68,68,0.35); }
 .btn-start-q.resume { background: rgba(245,158,11,0.12); color: #fbbf24; border-color: rgba(245,158,11,0.3); }
 .btn-start-q.resume:hover { background: #f59e0b; color: #fff; border-color: #f59e0b; box-shadow: 0 4px 12px rgba(245,158,11,0.35); }
 .btn-start-q.review { background: rgba(16,185,129,0.12); color: #34d399; border-color: rgba(16,185,129,0.3); }
@@ -1812,14 +1815,13 @@ function openProfile(id){
       Back to Dashboard
     </button>
 
-    <!-- Clean header -->
+    <!-- Header -->
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:28px">
       <div class="profile-avatar-lg" style="background:${bg};color:#fff">${initials(r.name)}</div>
       <div style="flex:1">
         <div class="profile-name">${r.name}</div>
         <div style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap">
           ${statusBadge(status)}
-          ${maritalBadge(r.marital)}
           <span style="font-size:12px;color:#64748b">${r.id}</span>
         </div>
       </div>
@@ -1835,32 +1837,50 @@ function openProfile(id){
       </div>
     </div>
 
-    <!-- Key info — single clean card -->
+    <!-- Editable info card -->
     <div class="info-card" style="margin-bottom:16px">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
-        <div class="info-field" style="padding-right:24px;border-right:1px solid rgba(255,255,255,0.07)">
-          <div class="info-label">Date of Birth</div>
-          <div class="info-value">${formatDate(r.dob)}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:600;color:#f0f4f8">Resident Information</div>
+        <button class="btn btn-ghost btn-sm" onclick="saveProfileEdits('${r.id}')" style="font-size:11px;padding:5px 12px">Save Changes</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div>
+          <div class="info-label" style="margin-bottom:5px">Full Name</div>
+          <input class="profile-edit-input" id="edit-name" value="${r.name}" placeholder="Full name">
         </div>
-        <div class="info-field" style="padding-left:24px">
-          <div class="info-label">Social Security Number</div>
-          <div class="info-value mono">
-            <span id="ssn-val">${r.ssn}</span>
-            <span class="ssn-reveal" onclick="toggleSSN('${r.id}')">Show</span>
-          </div>
+        <div>
+          <div class="info-label" style="margin-bottom:5px">Date of Birth</div>
+          <input class="profile-edit-input" id="edit-dob" type="date" value="${r.dob}">
         </div>
-        <div class="info-field" style="padding-right:24px;border-right:1px solid rgba(255,255,255,0.07);margin-bottom:0">
-          <div class="info-label">Marital Status</div>
-          <div class="info-value">${r.marital.charAt(0).toUpperCase()+r.marital.slice(1)}</div>
+        <div>
+          <div class="info-label" style="margin-bottom:5px">SSN <span class="ssn-reveal" onclick="toggleSSN('${r.id}')" style="cursor:pointer;margin-left:6px">Show</span></div>
+          <input class="profile-edit-input mono" id="edit-ssn" value="${r.ssn}" placeholder="XXX-XX-XXXX" oninput="formatSSN(this)">
+          <input type="hidden" id="edit-ssn-real" value="${r.ssnReal||''}">
         </div>
-        <div class="info-field" style="padding-left:24px;margin-bottom:0">
-          <div class="info-label">County</div>
-          <div class="info-value">${r.county}</div>
+        <div>
+          <div class="info-label" style="margin-bottom:5px">County</div>
+          <select class="profile-edit-input" id="edit-county">
+            ${['Nassau','Suffolk','Kings','Queens','New York','Bronx','Richmond','Westchester','Rockland','Broome','Oswego','Other'].map(c=>`<option value="${c}" ${r.county===c?'selected':''}>${c}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <div class="info-label" style="margin-bottom:5px">Marital Status</div>
+          <select class="profile-edit-input" id="edit-marital">
+            ${['single','married','divorced','separated','widowed'].map(m=>`<option value="${m}" ${r.marital===m?'selected':''}>${m.charAt(0).toUpperCase()+m.slice(1)}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <div class="info-label" style="margin-bottom:5px">Veteran</div>
+          <select class="profile-edit-input" id="edit-veteran">
+            <option value="yes" ${r.veteran==='yes'?'selected':''}>Yes</option>
+            <option value="no"  ${r.veteran==='no'?'selected':''}>No</option>
+            <option value="unknown" ${r.veteran==='unknown'?'selected':''}>Unknown</option>
+          </select>
         </div>
       </div>
     </div>
 
-    <!-- Workflow status row -->
+    <!-- Workflow status -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
       <div class="info-card" style="padding:14px 18px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
@@ -1880,24 +1900,46 @@ function openProfile(id){
       </div>
     </div>
 
-    <!-- Additional info row -->
-    <div class="info-card">
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0">
-        <div class="info-field" style="padding-right:20px;border-right:1px solid rgba(255,255,255,0.07);margin-bottom:0">
-          <div class="info-label">Veteran</div>
-          <div class="info-value">${r.veteran==='yes'?'Yes':r.veteran==='no'?'No':'Unknown'}</div>
-        </div>
-        <div class="info-field" style="padding:0 20px;border-right:1px solid rgba(255,255,255,0.07);margin-bottom:0">
-          <div class="info-label">Signing As</div>
-          <div class="info-value">${{self:'Self',representative:'Representative',bom:'BOM'}[r.signer]||r.signer}</div>
-        </div>
-        <div class="info-field" style="padding-left:20px;margin-bottom:0">
-          <div class="info-label">Last Updated</div>
-          <div class="info-value">${formatUpdated(r.updated)}</div>
-        </div>
-      </div>
-    </div>
+    <!-- Envelope ID if exists -->
+    ${r.envelopeId ? `
+    <div class="info-card" style="padding:12px 18px">
+      <div style="font-size:11px;color:#64748b">DocuSign Envelope ID</div>
+      <div style="font-size:12px;color:#94a3b8;font-family:'DM Mono',monospace;margin-top:4px">${r.envelopeId}</div>
+    </div>` : ''}
   `;
+}
+
+function saveProfileEdits(id){
+  const r = residents.find(x=>x.id===id);
+  if(!r) return;
+  const name    = document.getElementById('edit-name')?.value.trim();
+  const dob     = document.getElementById('edit-dob')?.value;
+  const ssn     = document.getElementById('edit-ssn')?.value.trim();
+  const ssnReal = document.getElementById('edit-ssn-real')?.value;
+  const county  = document.getElementById('edit-county')?.value;
+  const marital = document.getElementById('edit-marital')?.value;
+  const veteran = document.getElementById('edit-veteran')?.value;
+
+  if(!name){ showToast('Name is required'); return; }
+
+  r.name    = name;
+  r.dob     = dob || r.dob;
+  r.county  = county || r.county;
+  r.marital = marital || r.marital;
+  r.veteran = veteran || r.veteran;
+
+  // Update SSN if changed from masked value
+  if(ssn && !ssn.startsWith('***')){
+    const digits = ssn.replace(/\D/g,'');
+    r.ssn     = '***-**-' + digits.slice(-4);
+    r.ssnReal = ssn;
+  }
+
+  r.updated = new Date().toISOString().split('T')[0];
+  saveToStorage();
+  renderList();
+  openProfile(id); // re-render profile with updated data
+  showToast('✓ Resident info updated');
 }
 
 let ssnVisible = false;
