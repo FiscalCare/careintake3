@@ -610,8 +610,7 @@ select.form-control-m { background-image: url("data:image/svg+xml,%3Csvg xmlns='
       <!-- Stats -->
       <div class="stats-row">
         <div class="stat-card blue" onclick="setFilterByCard('all')" style="cursor:pointer" title="Show all residents"><div class="stat-icon blue">👥</div><div class="stat-label">Total Residents</div><div class="stat-value" id="stat-total" style="color:#60a5fa">6</div><div class="stat-sub">Click to show all</div></div>
-        <div class="stat-card amber" onclick="setFilterByCard('in-progress')" style="cursor:pointer" title="Show in progress"><div class="stat-icon amber">⏳</div><div class="stat-label">In Progress</div><div class="stat-value" id="stat-progress" style="color:#f59e0b">3</div><div class="stat-sub">Click to filter</div></div>
-        <div class="stat-card purple" onclick="setFilterByCard('pending')" style="cursor:pointer" title="Show signatures pending"><div class="stat-icon purple">✍️</div><div class="stat-label">Signatures Pending</div><div class="stat-value" id="stat-pending" style="color:#8b5cf6">2</div><div class="stat-sub">Click to filter</div></div>
+        <div class="stat-card amber" onclick="setFilterByCard('outstanding')" style="cursor:pointer" title="Show outstanding"><div class="stat-icon amber">⏳</div><div class="stat-label">Outstanding</div><div class="stat-value" id="stat-progress" style="color:#f59e0b">5</div><div class="stat-sub">Click to filter</div></div>
         <div class="stat-card green" onclick="setFilterByCard('completed')" style="cursor:pointer" title="Show completed"><div class="stat-icon green">✅</div><div class="stat-label">Completed</div><div class="stat-value" id="stat-done" style="color:#10b981">1</div><div class="stat-sub">Click to filter</div></div>
       </div>
 
@@ -622,10 +621,8 @@ select.form-control-m { background-image: url("data:image/svg+xml,%3Csvg xmlns='
           <input class="search-input" type="text" placeholder="Search residents..." id="search-input" oninput="filterResidents()">
         </div>
         <div class="filter-tabs">
-          <div class="filter-tab active" onclick="setFilter('all',this)">All</div>
-          <div class="filter-tab" onclick="setFilter('not-started',this)">Not Started</div>
-          <div class="filter-tab" onclick="setFilter('in-progress',this)">In Progress</div>
-          <div class="filter-tab" onclick="setFilter('pending',this)">Sig. Pending</div>
+          <div class="filter-tab active" onclick="setFilter('outstanding',this)">Outstanding</div>
+          <div class="filter-tab" onclick="setFilter('all',this)">All</div>
           <div class="filter-tab" onclick="setFilter('completed',this)">Completed</div>
         </div>
         <div style="margin-left:auto">
@@ -821,7 +818,7 @@ let residents = [
   { id:'R-0006', name:'Morton Blum',      dob:'1937-03-18', ssn:'***-**-2287', ssnReal:'086-33-2287', county:'Westchester', marital:'separated', veteran:'yes',     signer:'bom',            qStatus:'in-progress', sigStatus:'not-started', updated:'2026-04-13', colorIdx:5, qPct:70,  sigPct:0,   notes:'' },
 ];
 
-let currentFilter = 'all';
+let currentFilter = 'outstanding'; // default shows only active residents
 let currentResident = null;
 let signerSelected = 'self';
 
@@ -883,7 +880,9 @@ function renderList(){
   const filtered = residents.filter(r=>{
     const matchSearch = r.name.toLowerCase().includes(search)||r.county.toLowerCase().includes(search)||r.id.toLowerCase().includes(search);
     const status = overallStatus(r);
-    const matchFilter = currentFilter==='all'||status===currentFilter;
+    const matchFilter = currentFilter === 'all'
+      || (currentFilter === 'outstanding' && overallStatus(r) !== 'completed')
+      || (currentFilter === 'completed'   && overallStatus(r) === 'completed');
     return matchSearch&&matchFilter;
   });
 
@@ -937,11 +936,13 @@ function renderList(){
 }
 
 function updateStats(){
-  document.getElementById('stat-total').textContent = residents.length;
-  document.getElementById('stat-progress').textContent = residents.filter(r=>overallStatus(r)==='in-progress').length;
-  document.getElementById('stat-pending').textContent = residents.filter(r=>overallStatus(r)==='pending').length;
-  document.getElementById('stat-done').textContent = residents.filter(r=>overallStatus(r)==='completed').length;
-  document.getElementById('nav-count').textContent = residents.length;
+  const total     = residents.length;
+  const completed = residents.filter(r=>overallStatus(r)==='completed').length;
+  const outstanding = total - completed;
+  document.getElementById('stat-total').textContent    = total;
+  document.getElementById('stat-progress').textContent = outstanding;
+  document.getElementById('stat-done').textContent     = completed;
+  document.getElementById('nav-count').textContent     = total;
 }
 
 // ══════════════════════════════════════════
@@ -1792,21 +1793,18 @@ function buildPrefillTabs(r, templateId){
 
 function setFilterByCard(f){
   currentFilter = f;
-  // sync the filter tab pills
   document.querySelectorAll('.filter-tab').forEach(t => {
     const tabFilter = t.getAttribute('onclick').match(/'([^']+)'/)?.[1];
     t.classList.toggle('active', tabFilter === f);
   });
-  // highlight the active stat card
   document.querySelectorAll('.stat-card').forEach(c => c.style.outline = 'none');
-  const cardMap = {'all':0,'in-progress':1,'pending':2,'completed':3};
+  const cardMap = {'all':0,'outstanding':1,'completed':2};
   const idx = cardMap[f];
   if(idx !== undefined){
     const cards = document.querySelectorAll('.stat-card');
     if(cards[idx]) cards[idx].style.outline = '2px solid rgba(255,255,255,0.3)';
   }
   renderList();
-  // scroll down to the table
   document.querySelector('.toolbar')?.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
@@ -2216,6 +2214,23 @@ function persistProgress(){
     pensionSp:    qPensionSp,
   };
 
+  // Two-way sync — update resident profile fields from questionnaire answers
+  if(currentResident){
+    // Sync marital status
+    if(qAnswers.marital && qAnswers.marital !== currentResident.marital){
+      currentResident.marital = qAnswers.marital;
+    }
+    // Sync veteran status
+    const qVet = qAnswers.va_self;
+    if(qVet && qVet !== currentResident.veteran){
+      currentResident.veteran = qVet;
+    }
+    // Sync county if answered
+    if(qAnswers.addr_county && qAnswers.addr_county !== currentResident.county){
+      currentResident.county = qAnswers.addr_county;
+    }
+  }
+
   // Update the resident record so dashboard/profile always reflect reality
   if(currentResident.qStatus !== 'completed'){
     const steps = qActiveSteps();
@@ -2373,7 +2388,31 @@ function qSetAns(name,val,el){
   qAnswers[name]=val;
   document.querySelectorAll(`.q-radio-item[onclick*="'${name}'"]`).forEach(r=>r.classList.remove('sel'));
   el.classList.add('sel');
-  if(name==='marital'){setTimeout(()=>qRender(),50);}
+  if(name==='marital'){
+    setTimeout(()=>qRender(),50);
+    // Check mismatch with profile
+    if(currentResident && currentResident.marital && val !== currentResident.marital){
+      const profVal = currentResident.marital.charAt(0).toUpperCase()+currentResident.marital.slice(1);
+      const qVal    = val.charAt(0).toUpperCase()+val.slice(1);
+      if(confirm(`Profile shows "${profVal}" but you selected "${qVal}".\nUpdate profile to match?`)){
+        currentResident.marital = val;
+        saveToStorage();
+        renderList();
+      }
+    }
+  }
+  if(name==='va_self'){
+    // Check mismatch with profile veteran status
+    if(currentResident && currentResident.veteran && val !== currentResident.veteran){
+      const profVal = currentResident.veteran === 'yes' ? 'Yes' : 'No';
+      const qVal    = val === 'yes' ? 'Yes' : 'No';
+      if(confirm(`Profile shows veteran: "${profVal}" but you selected "${qVal}".\nUpdate profile to match?`)){
+        currentResident.veteran = val;
+        saveToStorage();
+        renderList();
+      }
+    }
+  }
   document.querySelectorAll(`[data-qcf="${name}"]`).forEach(b=>{
     b.classList.toggle('hidden',!(b.dataset.qcv||'').split(',').includes(val));
     b.classList.toggle('q-cond-block',true);
@@ -2585,10 +2624,10 @@ widowed:(s)=>qSecCard(s,`
 `),
 
 va:(s)=>qSecCard(s,`
-  <div class="q-field-group"><label class="q-field-label">Are you or your Spouse a Veteran? <span class="req">*</span></label><div class="q-radio-group inline">${qR('va_any','yes','Yes')}${qR('va_any','no','No')}</div></div>
+  <div class="q-field-group"><label class="q-field-label">Are you${qIsMarried()?' or your Spouse':''} a Veteran? <span class="req">*</span></label><div class="q-radio-group inline">${qR('va_any','yes','Yes')}${qR('va_any','no','No')}</div></div>
   <div class="q-field-group"><label class="q-field-label">Are you a Veteran? <span class="req">*</span> <span class="q-prefilled-badge">✓ Pre-filled</span></label><div class="q-radio-group inline">${qR('va_self','yes','Yes')}${qR('va_self','no','No')}</div></div>
   ${qCond('va_any','yes',`
-    <div class="q-field-group"><label class="q-field-label">Who? <span class="req">*</span></label><div class="q-check-group inline">${qC('va_who','resident','Resident')}${qC('va_who','spouse','Spouse')}${qC('va_who','both','Both')}</div></div>
+    ${qIsMarried()?`<div class="q-field-group"><label class="q-field-label">Who? <span class="req">*</span></label><div class="q-check-group inline">${qC('va_who','resident','Resident')}${qC('va_who','spouse','Spouse')}${qC('va_who','both','Both')}</div></div>`:''}
     ${qF('va_branch','What Branch of Service did the Veteran serve in?')}
     <div class="q-field-group"><label class="q-field-label">Are Benefits being received (Pension)? — Resident <span class="req">*</span></label><div class="q-check-group inline">${qC('va_benefits_res','yes','Yes')}${qC('va_benefits_res','no','No')}${qC('va_benefits_res','unknown','Unknown')}</div></div>
     ${qIsMarried()?`<div class="q-field-group"><label class="q-field-label">Are Benefits being received (Pension)? — Spouse <span class="req">*</span></label><div class="q-check-group inline">${qC('va_benefits_sp','yes','Yes')}${qC('va_benefits_sp','no','No')}${qC('va_benefits_sp','unknown','Unknown')}</div></div>`:''}
@@ -3003,8 +3042,8 @@ function saveResident(r){
 // ══════════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════════
-loadFromStorage(); // restore saved data before rendering
-currentFilter = 'all';
+loadFromStorage();
+currentFilter = 'outstanding';
 renderList();
 (function handleSigningReturn(){
   const urlParams = new URLSearchParams(window.location.search);
