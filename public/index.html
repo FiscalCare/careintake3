@@ -157,9 +157,10 @@ body { font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden
 
 .col-text { font-size: 13px; color: #94a3b8; }
 .last-updated { font-size: 11px; color: #64748b; }
-.profile-edit-input { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09); border-radius: 7px; color: #f0f4f8; font-family: 'DM Sans',sans-serif; font-size: 13px; padding: 8px 12px; outline: none; transition: border .15s; }
+.profile-edit-input { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09); border-radius: 7px; color: #f0f4f8; font-family: 'DM Sans',sans-serif; font-size: 13px; padding: 8px 12px; outline: none; transition: border .15s; -webkit-appearance: none; appearance: none; }
 .profile-edit-input:focus { border-color: #3b82f6; background: rgba(59,130,246,0.06); }
 .profile-edit-input option { background: #1a2e45; color: #f0f4f8; }
+select.profile-edit-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 30px; }
 
 /* ROW ACTIONS — the key new area */
 .row-actions { display: flex; align-items: center; gap: 5px; justify-content: flex-end; }
@@ -354,9 +355,13 @@ body { font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden
 .form-group-m { display: flex; flex-direction: column; gap: 6px; }
 .form-label-m { font-size: 12px; font-weight: 500; color: #94a3b8; }
 .form-label-m .req { color: #ef4444; font-size: 11px; }
-.form-control-m { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09); border-radius: 8px; color: #f0f4f8; font-family: 'DM Sans',sans-serif; font-size: 13.5px; padding: 10px 14px; outline: none; transition: border .15s, background .15s; width: 100%; appearance: none; }
+.form-control-m { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09); border-radius: 8px; color: #f0f4f8; font-family: 'DM Sans',sans-serif; font-size: 13.5px; padding: 10px 14px; outline: none; transition: border .15s, background .15s; width: 100%; -webkit-appearance: none; appearance: none; }
 .form-control-m::placeholder { color: #64748b; }
 .form-control-m:focus { border-color: #3b82f6; background: rgba(59,130,246,0.06); }
+.form-control-m option { background: #1a2e45; color: #f0f4f8; }
+.form-control-m option { background: #1a2e45; color: #f0f4f8; }
+.form-control-m optgroup { background: #0f1e2e; color: #64748b; font-size: 11px; }
+select.form-control-m { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
 .form-section-label-m { font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: #64748b; font-weight: 600; margin: 20px 0 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.09); }
 .radio-group-m { display: flex; gap: 10px; flex-wrap: wrap; }
 .radio-pill-m { display: flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.09); cursor: pointer; background: rgba(255,255,255,0.05); font-size: 13px; color: #94a3b8; transition: all .12s; }
@@ -731,9 +736,39 @@ body { font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden
           <label class="form-label-m">County <span class="req">*</span></label>
           <select class="form-control-m" id="r-county">
             <option value="">Select county...</option>
-            <option>Nassau</option><option>Suffolk</option><option>Kings</option><option>Queens</option>
-            <option>New York</option><option>Bronx</option><option>Richmond</option>
-            <option>Westchester</option><option>Rockland</option><option>Orange</option><option>Other</option>
+            <optgroup label="New York City">
+              <option>Bronx</option><option>Kings</option><option>New York</option><option>Queens</option><option>Richmond</option>
+            </optgroup>
+            <optgroup label="Long Island">
+              <option>Nassau</option><option>Suffolk</option>
+            </optgroup>
+            <optgroup label="Hudson Valley">
+              <option>Dutchess</option><option>Orange</option><option>Putnam</option><option>Rockland</option><option>Sullivan</option><option>Ulster</option><option>Westchester</option>
+            </optgroup>
+            <optgroup label="Capital Region">
+              <option>Albany</option><option>Columbia</option><option>Greene</option><option>Montgomery</option><option>Rensselaer</option><option>Saratoga</option><option>Schenectady</option><option>Schoharie</option><option>Warren</option><option>Washington</option>
+            </optgroup>
+            <optgroup label="Central NY">
+              <option>Cayuga</option><option>Cortland</option><option>Madison</option><option>Oneida</option><option>Onondaga</option><option>Oswego</option>
+            </optgroup>
+            <optgroup label="North Country">
+              <option>Clinton</option><option>Essex</option><option>Franklin</option><option>Fulton</option><option>Hamilton</option><option>Jefferson</option><option>Lewis</option><option>St. Lawrence</option>
+            </optgroup>
+            <optgroup label="Mohawk Valley">
+              <option>Herkimer</option><option>Otsego</option>
+            </optgroup>
+            <optgroup label="Southern Tier">
+              <option>Broome</option><option>Chemung</option><option>Chenango</option><option>Delaware</option><option>Schuyler</option><option>Steuben</option><option>Tioga</option><option>Tompkins</option>
+            </optgroup>
+            <optgroup label="Finger Lakes">
+              <option>Genesee</option><option>Livingston</option><option>Monroe</option><option>Ontario</option><option>Orleans</option><option>Seneca</option><option>Wayne</option><option>Wyoming</option><option>Yates</option>
+            </optgroup>
+            <optgroup label="Western NY">
+              <option>Allegany</option><option>Cattaraugus</option><option>Chautauqua</option><option>Erie</option><option>Niagara</option>
+            </optgroup>
+            <optgroup label="Other">
+              <option value="Out of State">Out of State</option>
+            </optgroup>
           </select>
         </div>
         <div class="form-group-m">
@@ -754,16 +789,6 @@ body { font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden
             <option value="no">No</option><option value="unknown">Unknown</option>
           </select>
         </div>
-      </div>
-      <div class="form-section-label-m">Who is Completing This Intake?</div>
-      <div class="form-group-m">
-        <label class="form-label-m">Completing as <span class="req">*</span></label>
-        <div class="radio-group-m" id="signer-radio">
-          <label class="radio-pill-m checked" onclick="selectSigner('self',this)"><input type="radio"><div class="radio-dot-m"></div>Self (Resident)</label>
-          <label class="radio-pill-m" onclick="selectSigner('representative',this)"><input type="radio"><div class="radio-dot-m"></div>Representative</label>
-          <label class="radio-pill-m" onclick="selectSigner('bom',this)"><input type="radio"><div class="radio-dot-m"></div>BOM on behalf</label>
-        </div>
-      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
@@ -1863,7 +1888,21 @@ function openProfile(id){
         <div>
           <div class="info-label" style="margin-bottom:5px">County</div>
           <select class="profile-edit-input" id="edit-county">
-            ${['Nassau','Suffolk','Kings','Queens','New York','Bronx','Richmond','Westchester','Rockland','Broome','Oswego','Other'].map(c=>`<option value="${c}" ${r.county===c?'selected':''}>${c}</option>`).join('')}
+            ${[
+              ['New York City', ['Bronx','Kings','New York','Queens','Richmond']],
+              ['Long Island', ['Nassau','Suffolk']],
+              ['Hudson Valley', ['Dutchess','Orange','Putnam','Rockland','Sullivan','Ulster','Westchester']],
+              ['Capital Region', ['Albany','Columbia','Greene','Montgomery','Rensselaer','Saratoga','Schenectady','Schoharie','Warren','Washington']],
+              ['Central NY', ['Cayuga','Cortland','Madison','Oneida','Onondaga','Oswego']],
+              ['North Country', ['Clinton','Essex','Franklin','Fulton','Hamilton','Jefferson','Lewis','St. Lawrence']],
+              ['Mohawk Valley', ['Herkimer','Otsego']],
+              ['Southern Tier', ['Broome','Chemung','Chenango','Delaware','Schuyler','Steuben','Tioga','Tompkins']],
+              ['Finger Lakes', ['Genesee','Livingston','Monroe','Ontario','Orleans','Seneca','Wayne','Wyoming','Yates']],
+              ['Western NY', ['Allegany','Cattaraugus','Chautauqua','Erie','Niagara']],
+            ].map(([group, counties]) =>
+              `<optgroup label="${group}">${counties.map(c=>`<option value="${c}" ${r.county===c?'selected':''}>${c}</option>`).join('')}</optgroup>`
+            ).join('')}
+            <optgroup label="Other"><option value="Out of State" ${r.county==='Out of State'?'selected':''}>Out of State</option></optgroup>
           </select>
         </div>
         <div>
