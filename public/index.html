@@ -129,8 +129,8 @@ body { font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden
 
 /* TABLE */
 .table-wrap { background: #132033; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; overflow: hidden; }
-.table-head { display: grid; grid-template-columns: 1.8fr .9fr .8fr .8fr .9fr 260px; padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.09); font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: #64748b; font-weight: 500; }
-.table-row { display: grid; grid-template-columns: 1.8fr .9fr .8fr .8fr .9fr 260px; padding: 13px 20px; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.07); cursor: pointer; transition: background .12s; }
+.table-head { display: grid; grid-template-columns: 1.6fr .8fr .7fr .7fr .8fr 300px; padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.09); font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: #64748b; font-weight: 500; }
+.table-row { display: grid; grid-template-columns: 1.6fr .8fr .7fr .7fr .8fr 300px; padding: 13px 20px; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.07); cursor: pointer; transition: background .12s; }
 .table-row:last-child { border-bottom: none; }
 .table-row:hover { background: rgba(255,255,255,0.04); }
 
@@ -788,12 +788,12 @@ const avatarColors = [
 ];
 
 let residents = [
-  { id:'R-0001', name:'Dorothy Kaplan',   dob:'1938-04-12', ssn:'***-**-4821', ssnReal:'078-05-1120', county:'Nassau',      marital:'widowed',   veteran:'no',      signer:'representative', qStatus:'completed',   sigStatus:'completed',   updated:'2026-04-10', colorIdx:0, qPct:100, sigPct:100 },
-  { id:'R-0002', name:'Harold Fineman',   dob:'1942-08-29', ssn:'***-**-7743', ssnReal:'079-22-7743', county:'Suffolk',     marital:'married',   veteran:'yes',     signer:'self',           qStatus:'in-progress', sigStatus:'not-started', updated:'2026-04-13', colorIdx:1, qPct:55,  sigPct:0   },
-  { id:'R-0003', name:'Miriam Goldstein', dob:'1935-01-07', ssn:'***-**-3312', ssnReal:'083-44-3312', county:'Kings',       marital:'single',    veteran:'no',      signer:'bom',            qStatus:'pending',     sigStatus:'pending',     updated:'2026-04-12', colorIdx:2, qPct:100, sigPct:40  },
-  { id:'R-0004', name:'Bernard Roth',     dob:'1940-11-22', ssn:'***-**-6654', ssnReal:'084-16-6654', county:'Queens',      marital:'divorced',  veteran:'no',      signer:'representative', qStatus:'in-progress', sigStatus:'not-started', updated:'2026-04-11', colorIdx:3, qPct:30,  sigPct:0   },
-  { id:'R-0005', name:'Sylvia Horowitz',  dob:'1944-07-03', ssn:'***-**-9901', ssnReal:'085-62-9901', county:'Nassau',      marital:'married',   veteran:'no',      signer:'self',           qStatus:'not-started', sigStatus:'not-started', updated:'2026-04-14', colorIdx:4, qPct:0,   sigPct:0   },
-  { id:'R-0006', name:'Morton Blum',      dob:'1937-03-18', ssn:'***-**-2287', ssnReal:'086-33-2287', county:'Westchester', marital:'separated', veteran:'yes',     signer:'bom',            qStatus:'in-progress', sigStatus:'not-started', updated:'2026-04-13', colorIdx:5, qPct:70,  sigPct:0   },
+  { id:'R-0001', name:'Dorothy Kaplan',   dob:'1938-04-12', ssn:'***-**-4821', ssnReal:'078-05-1120', county:'Nassau',      marital:'widowed',   veteran:'no',      signer:'representative', qStatus:'completed',   sigStatus:'completed',   updated:'2026-04-10', colorIdx:0, qPct:100, sigPct:100, notes:'' },
+  { id:'R-0002', name:'Harold Fineman',   dob:'1942-08-29', ssn:'***-**-7743', ssnReal:'079-22-7743', county:'Suffolk',     marital:'married',   veteran:'yes',     signer:'self',           qStatus:'in-progress', sigStatus:'not-started', updated:'2026-04-13', colorIdx:1, qPct:55,  sigPct:0,   notes:'' },
+  { id:'R-0003', name:'Miriam Goldstein', dob:'1935-01-07', ssn:'***-**-3312', ssnReal:'083-44-3312', county:'Kings',       marital:'single',    veteran:'no',      signer:'bom',            qStatus:'pending',     sigStatus:'pending',     updated:'2026-04-12', colorIdx:2, qPct:100, sigPct:40,  notes:'' },
+  { id:'R-0004', name:'Bernard Roth',     dob:'1940-11-22', ssn:'***-**-6654', ssnReal:'084-16-6654', county:'Queens',      marital:'divorced',  veteran:'no',      signer:'representative', qStatus:'in-progress', sigStatus:'not-started', updated:'2026-04-11', colorIdx:3, qPct:30,  sigPct:0,   notes:'' },
+  { id:'R-0005', name:'Sylvia Horowitz',  dob:'1944-07-03', ssn:'***-**-9901', ssnReal:'085-62-9901', county:'Nassau',      marital:'married',   veteran:'no',      signer:'self',           qStatus:'not-started', sigStatus:'not-started', updated:'2026-04-14', colorIdx:4, qPct:0,   sigPct:0,   notes:'' },
+  { id:'R-0006', name:'Morton Blum',      dob:'1937-03-18', ssn:'***-**-2287', ssnReal:'086-33-2287', county:'Westchester', marital:'separated', veteran:'yes',     signer:'bom',            qStatus:'in-progress', sigStatus:'not-started', updated:'2026-04-13', colorIdx:5, qPct:70,  sigPct:0,   notes:'' },
 ];
 
 let currentFilter = 'all';
@@ -836,14 +836,14 @@ function statusBadge(s){
 function sigBtnLabel(r){
   if(r.sigStatus==='completed')        return {label:'Signatures Complete', cls:'sig-done', disabled:false};
   if(r.sigStatus==='awaiting-spouse')  return {label:'Awaiting Spouse',     cls:'sig-sent', disabled:false};
-  if(r.sigStatus==='pending')          return {label:'In Progress',         cls:'sig-sent', disabled:false};
-  if(r.sigStatus==='in-progress')      return {label:'Continue',            cls:'sig-sent', disabled:false};
+  if(r.sigStatus==='pending')          return {label:'Resume Signatures',   cls:'sig-sent', disabled:false};
+  if(r.sigStatus==='in-progress')      return {label:'Resume Signatures',   cls:'sig-sent', disabled:false};
   return                                      {label:'Start Signatures',    cls:'',         disabled:false};
 }
 function qBtnLabel(r){
-  if(r.qStatus==='completed')   return {label:'Questionnaire Complete', cls:'review'};
-  if(r.qStatus==='in-progress') return {label:'Resume',                 cls:'resume'};
-  return                               {label:'Start Form',             cls:''};
+  if(r.qStatus==='completed')   return {label:'Questionnaire Complete',  cls:'review'};
+  if(r.qStatus==='in-progress') return {label:'Resume Questionnaire',    cls:'resume'};
+  return                               {label:'Start Form',              cls:''};
 }
 
 // ══════════════════════════════════════════
@@ -898,7 +898,10 @@ function renderList(){
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           ${s.label}
         </button>
-        <button class="action-icon-btn" title="View profile" onclick="openProfile('${r.id}')">
+        <button class="action-icon-btn" title="Add note" onclick="openNoteModal('${r.id}')" style="${r.notes?'color:#fbbf24':''}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="12" y1="17" x2="8" y2="17"/></svg>
+        </button>
+        <button class="action-icon-btn" title="View profile" onclick="openProfile('${r.id}')">>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
         </button>
       </div>
@@ -1900,6 +1903,16 @@ function openProfile(id){
       </div>
     </div>
 
+    <!-- Notes -->
+    <div class="info-card" style="margin-top:16px">
+      <div style="font-size:13px;font-weight:600;color:#f0f4f8;margin-bottom:12px">Notes</div>
+      <textarea id="profile-notes" placeholder="Add notes about this resident..." 
+        style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);border-radius:8px;color:#f0f4f8;font-family:'DM Sans',sans-serif;font-size:13px;padding:10px 12px;outline:none;resize:vertical;min-height:80px;transition:border .15s"
+        onfocus="this.style.borderColor='#3b82f6'" 
+        onblur="this.style.borderColor='rgba(255,255,255,0.09)'"
+        oninput="saveNoteFromProfile('${r.id}',this.value)">${r.notes||''}</textarea>
+    </div>
+
     <!-- Envelope ID if exists -->
     ${r.envelopeId ? `
     <div class="info-card" style="padding:12px 18px">
@@ -1994,7 +2007,7 @@ function addResident(){
   const colorIdx=residents.length%avatarColors.length;
   const today=new Date().toISOString().split('T')[0];
   const newId='R-'+String(residents.length+1).padStart(4,'0');
-  residents.unshift({ id:newId,name,dob,ssn:ssnMasked,ssnReal,county,marital,veteran,signer:signerSelected,qStatus:'not-started',sigStatus:'not-started',updated:today,colorIdx,qPct:0,sigPct:0 });
+  residents.unshift({ id:newId,name,dob,ssn:ssnMasked,ssnReal,county,marital,veteran,signer:signerSelected,qStatus:'not-started',sigStatus:'not-started',updated:today,colorIdx,qPct:0,sigPct:0,notes:'' });
   closeModal();
   saveToStorage();
   renderList();
@@ -2850,8 +2863,42 @@ function qSubmit(){
 }
 
 // ══════════════════════════════════════════
-//  LOCAL STORAGE PERSISTENCE
+//  NOTES
 // ══════════════════════════════════════════
+let noteResidentId = null;
+
+function openNoteModal(id){
+  const r = residents.find(x=>x.id===id);
+  if(!r) return;
+  noteResidentId = id;
+  document.getElementById('note-modal-name').textContent = r.name;
+  document.getElementById('note-textarea').value = r.notes || '';
+  document.getElementById('note-modal-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('note-textarea').focus(), 100);
+}
+
+function closeNoteModal(){
+  document.getElementById('note-modal-overlay').classList.remove('open');
+  noteResidentId = null;
+}
+
+function saveNote(){
+  const r = residents.find(x=>x.id===noteResidentId);
+  if(!r) return;
+  r.notes = document.getElementById('note-textarea').value;
+  r.updated = new Date().toISOString().split('T')[0];
+  saveToStorage();
+  renderList();
+  closeNoteModal();
+  showToast('Note saved');
+}
+
+function saveNoteFromProfile(id, value){
+  const r = residents.find(x=>x.id===id);
+  if(!r) return;
+  r.notes = value;
+  saveToStorage();
+}
 const STORAGE_KEY = 'careintake_residents_v1';
 const SESSION_KEY = 'careintake_sessions_v1';
 
@@ -3129,6 +3176,34 @@ async function downloadSignedPDF(r){
       <button class="btn btn-primary" onclick="psConfirm()" style="background:#8b5cf6;border-color:#8b5cf6">
         Continue to Signatures →
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- NOTE MODAL -->
+<div class="ps-modal-overlay" id="note-modal-overlay" style="z-index:460">
+  <div class="ps-modal" style="width:440px">
+    <div class="ps-modal-header">
+      <div class="ps-modal-icon" style="background:rgba(251,191,36,0.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+      <div>
+        <div class="ds-modal-title" id="note-modal-name">Notes</div>
+        <div class="ds-modal-sub">These notes are for internal use only</div>
+      </div>
+      <button class="ds-modal-close" onclick="closeNoteModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="ps-modal-body">
+      <textarea id="note-textarea" placeholder="Add notes about this resident..."
+        style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);border-radius:8px;color:#f0f4f8;font-family:'DM Sans',sans-serif;font-size:13px;padding:12px;outline:none;resize:vertical;min-height:120px;transition:border .15s;line-height:1.6"
+        onfocus="this.style.borderColor='#fbbf24'"
+        onblur="this.style.borderColor='rgba(255,255,255,0.09)'"></textarea>
+    </div>
+    <div class="ps-modal-footer">
+      <button class="btn btn-ghost" onclick="closeNoteModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveNote()" style="background:#f59e0b;border-color:#f59e0b">Save Note</button>
     </div>
   </div>
 </div>
