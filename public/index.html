@@ -1169,6 +1169,7 @@ let psAnswers = {}; // { marital, county, signer, veteran }
 let signingResident = null;
 
 function openSigningModal(id){
+  alert('openSigningModal called: ' + id);
   console.log('openSigningModal called with id:', id);
   try{
   const r = residents.find(x=>x.id===id);
