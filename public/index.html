@@ -826,7 +826,7 @@ function formatUpdated(d){ if(!d)return'—'; const months=['Jan','Feb','Mar','A
 
 function overallStatus(r){
   if(r.qStatus==='completed' && r.sigStatus==='completed') return 'completed';
-  if(r.qStatus==='completed' || r.sigStatus==='completed' || r.sigStatus==='pending' || r.sigStatus==='awaiting-spouse') return 'in-progress';
+  if(r.qStatus==='completed' || r.sigStatus==='completed' || r.sigStatus==='pending' || r.sigStatus==='emailed' || r.sigStatus==='awaiting-spouse') return 'in-progress';
   if(r.qStatus==='in-progress' || r.sigStatus==='in-progress') return 'in-progress';
   return 'not-started';
 }
@@ -841,11 +841,12 @@ function rowColor(r){
 
 function statusBadge(s){
   const map={
-    'not-started': ['#ef4444','Not Started'],
-    'in-progress': ['#f59e0b','In Progress'],
-    'pending':     ['#f59e0b','Sig. Pending'],
+    'not-started':     ['#ef4444','Not Started'],
+    'in-progress':     ['#f59e0b','In Progress'],
+    'pending':         ['#f59e0b','Sig. Pending'],
+    'emailed':         ['#60a5fa','Emailed Out'],
     'awaiting-spouse': ['#f59e0b','Awaiting Spouse'],
-    'completed':   ['#10b981','Completed'],
+    'completed':       ['#10b981','Completed'],
   };
   const [color, label] = map[s] || map['not-started'];
   return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:${color}">
@@ -856,6 +857,7 @@ function statusBadge(s){
 function sigBtnLabel(r){
   if(r.sigStatus==='completed')        return {label:'Sigs Complete',    cls:'sig-done', disabled:false};
   if(r.sigStatus==='awaiting-spouse')  return {label:'Await Spouse',     cls:'sig-sent', disabled:false};
+  if(r.sigStatus==='emailed')          return {label:'Emailed Out',      cls:'sig-sent', disabled:false};
   if(r.sigStatus==='pending')          return {label:'Resume Sigs',      cls:'sig-sent', disabled:false};
   if(r.sigStatus==='in-progress')      return {label:'Resume Sigs',      cls:'sig-sent', disabled:false};
   return                                      {label:'Start Signatures', cls:'',         disabled:false};
@@ -1163,7 +1165,6 @@ let psAnswers = {}; // { marital, county, signer, veteran }
 let signingResident = null;
 
 function openSigningModal(id){
-  console.log('openSigningModal called with id:', id);
   try{
   const r = residents.find(x=>x.id===id);
   if(!r) return;
@@ -1190,8 +1191,8 @@ function openSigningModal(id){
     return;
   }
 
-  // If pending or in-progress with existing envelope — reopen the signing session
-  if((r.sigStatus === 'pending' || r.sigStatus === 'in-progress') && r.envelopeId){
+  // If pending, emailed or in-progress with existing envelope — reopen or check status
+  if((r.sigStatus === 'pending' || r.sigStatus === 'in-progress' || r.sigStatus === 'emailed') && r.envelopeId){
     sessionStorage.setItem('ds_signing_resident', r.id);
     _resumeSigningSession(r);
     return;
@@ -1323,17 +1324,13 @@ const dsState = {
 const residentSigningState = {}; // keyed by resident ID
 
 function _openFullSigningModal(r){
-  console.log('_openFullSigningModal called for:', r.name);
   signingResident = r;
   const isMarried = r.marital === 'married';
 
-  // Always reset the send button when modal opens
   const sendBtn = document.getElementById('ds-send-btn');
-  console.log('ds-send-btn found:', !!sendBtn);
   if(sendBtn){ sendBtn.textContent = 'Start Signing'; sendBtn.disabled = false; }
 
   const nameEl = document.getElementById('ds-modal-resident-name');
-  console.log('ds-modal-resident-name found:', !!nameEl);
   if(nameEl) nameEl.textContent = r.name;
   document.getElementById('ds-modal-resident-sub').textContent =
     `${r.county} County · ${r.marital.charAt(0).toUpperCase()+r.marital.slice(1)}${r.veteran==='yes'?' · Veteran':''}`;
@@ -1369,13 +1366,10 @@ function _openFullSigningModal(r){
   if(missing > 0) w.textContent = `⚠ ${missing} template ID${missing>1?'s':''} not yet configured.`;
 
   const overlay = document.getElementById('ds-modal-overlay');
-  console.log('ds-modal-overlay found:', !!overlay, 'display:', overlay?.style.display);
-  // Move to body root to escape any CSS stacking contexts
   document.body.appendChild(overlay);
   overlay.classList.add('open');
   overlay.style.display = 'flex';
   overlay.style.zIndex = '9999';
-  console.log('modal opened, display now:', overlay?.style.display);
 }
 
 // Save state when modal closes
@@ -1537,11 +1531,12 @@ async function sendSignatureEnvelope(){
               const recFull = allRecipients.find(a => a.role === mappedRole || a.role === rec.role);
               const email = recFull.email || `signing.${rec.role.toLowerCase().replace(/[^a-z0-9]/g,'')}@careintake.local`;
               return {
-                roleName:     rec.role,
-                recipientId:  roleToId[recFull.role] || String(ri + 1),
-                name:         recFull.name || rec.name,
+                roleName:       rec.role,
+                recipientId:    roleToId[recFull.role] || String(ri + 1),
+                name:           recFull.name || rec.name,
                 email,
-                routingOrder: String(ri + 1),
+                routingOrder:   String(ri + 1),
+                deliveryMethod: 'email',
                 tabs: buildPrefillTabs(r, p.id),
               };
             }),
@@ -1585,10 +1580,13 @@ async function sendSignatureEnvelope(){
 
     const envelopeId = envData.envelopeId;
     r.envelopeId = envelopeId;
-    r.sigStatus  = 'pending';
-    r.updated    = new Date().toISOString().split('T')[0];
+    // Set status based on signing method
+    const hasEmailSigner    = allRecipients.some(rec => rec.method === 'email');
+    const hasInPersonSigner = allRecipients.some(rec => rec.method === 'inperson');
+    r.sigStatus = hasInPersonSigner ? 'pending' : (hasEmailSigner ? 'emailed' : 'pending');
+    r.updated   = new Date().toISOString().split('T')[0];
     console.log('Envelope created:', envelopeId);
-    renderList(); // update dashboard immediately
+    renderList();
 
     // Build a map of actual recipientIds from DocuSign's response
     // DocuSign may assign different IDs than what we sent
@@ -3130,7 +3128,7 @@ function startPolling(){
     const activeResidents = residents.filter(r =>
       r.envelopeId &&
       r.sigStatus !== 'completed' &&
-      (r.sigStatus === 'pending' || r.sigStatus === 'in-progress' || r.sigStatus === 'awaiting-spouse')
+      (r.sigStatus === 'pending' || r.sigStatus === 'in-progress' || r.sigStatus === 'awaiting-spouse' || r.sigStatus === 'emailed')
     );
     for(const r of activeResidents){
       await checkEnvelopeStatus(r);
