@@ -163,25 +163,30 @@ body { font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden
 select.profile-edit-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 30px; }
 
 /* ROW ACTIONS — the key new area */
-.row-actions { display: flex; align-items: center; gap: 4px; justify-content: flex-end; }
+.row-actions { display: flex; align-items: center; gap: 5px; justify-content: flex-end; }
 
-.btn-start-q, .btn-start-sig {
-  display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
-  width: 58px; min-height: 40px; border-radius: 6px; padding: 4px 3px;
-  font-family: 'DM Sans',sans-serif; font-size: 9.5px; font-weight: 700; line-height: 1.25;
-  cursor: pointer; transition: all .15s; white-space: normal; text-align: center;
-  border: 1px solid; flex-shrink: 0;
+.btn-start-q {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 10px; border-radius: 6px;
+  font-family: 'DM Sans',sans-serif; font-size: 11.5px; font-weight: 600;
+  cursor: pointer; transition: all .15s; white-space: nowrap;
+  background: rgba(239,68,68,0.15); color: #f87171;
+  border: 1px solid rgba(239,68,68,0.3);
 }
-.btn-start-q svg, .btn-start-sig svg { width: 11px; height: 11px; margin-bottom: 2px; flex-shrink: 0; }
-
-.btn-start-q { background: rgba(239,68,68,0.15); color: #f87171; border-color: rgba(239,68,68,0.3); }
 .btn-start-q:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
 .btn-start-q.resume { background: rgba(245,158,11,0.12); color: #fbbf24; border-color: rgba(245,158,11,0.3); }
 .btn-start-q.resume:hover { background: #f59e0b; color: #fff; border-color: #f59e0b; }
 .btn-start-q.review { background: rgba(16,185,129,0.12); color: #34d399; border-color: rgba(16,185,129,0.3); }
 .btn-start-q.review:hover { background: #10b981; color: #fff; border-color: #10b981; }
 
-.btn-start-sig { background: rgba(239,68,68,0.15); color: #f87171; border-color: rgba(239,68,68,0.3); }
+.btn-start-sig {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 10px; border-radius: 6px;
+  font-family: 'DM Sans',sans-serif; font-size: 11.5px; font-weight: 600;
+  cursor: pointer; transition: all .15s; white-space: nowrap;
+  background: rgba(239,68,68,0.15); color: #f87171;
+  border: 1px solid rgba(239,68,68,0.3);
+}
 .btn-start-sig:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
 .btn-start-sig.sig-sent { background: rgba(245,158,11,0.12); color: #fbbf24; border-color: rgba(245,158,11,0.3); }
 .btn-start-sig.sig-sent:hover { background: #f59e0b; color: #fff; border-color: #f59e0b; }
@@ -893,6 +898,8 @@ function renderList(){
     const sigAttrs = s.disabled
       ? 'disabled title="Complete questionnaire first"'
       : `onclick="openSigningModal('${r.id}')"`;
+    const qLabel = q.label;
+    const sLabel = s.label;
     return `
     <div class="table-row" onclick="openProfile('${r.id}')" style="border-left:3px solid ${color}">
       <div class="resident-name">
@@ -907,12 +914,8 @@ function renderList(){
       <div style="font-size:12px;color:#94a3b8">${r.county}</div>
       <div class="last-updated">${formatUpdated(r.updated)}</div>
       <div class="row-actions" onclick="event.stopPropagation()">
-        <button class="btn-start-q ${q.cls}" onclick="launchQuestionnaire('${r.id}')">
-          ${q.label.replace(' ','\n').split('\n').map(w=>`<span>${w}</span>`).join('')}
-        </button>
-        <button class="btn-start-sig ${s.cls}" ${sigAttrs}>
-          ${s.label.replace(' ','\n').split('\n').map(w=>`<span>${w}</span>`).join('')}
-        </button>
+        <button class="btn-start-q ${q.cls}" onclick="launchQuestionnaire('${r.id}')">${qLabel}</button>
+        <button class="btn-start-sig ${s.cls}" ${sigAttrs}>${sLabel}</button>
         <button class="action-icon-btn" title="Add note" onclick="openNoteModal('${r.id}')" style="${r.notes?'color:#fbbf24':''}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="12" y1="17" x2="8" y2="17"/></svg>
         </button>
