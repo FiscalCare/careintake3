@@ -195,8 +195,8 @@ select.profile-edit-input { background-image: url("data:image/svg+xml,%3Csvg xml
 .btn-start-sig:disabled { opacity: .4; cursor: not-allowed; }
 
 /* DOCUSIGN MODAL */
-.ds-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); z-index: 400; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .2s; }
-.ds-modal-overlay.open { opacity: 1; pointer-events: all; }
+.ds-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); z-index: 400; display: none; align-items: center; justify-content: center; }
+.ds-modal-overlay.open { display: flex; }
 .ds-modal { background: #1a2e45; border: 1px solid rgba(255,255,255,0.09); border-radius: 18px; width: 600px; max-width: 96vw; max-height: 92vh; overflow-y: auto; box-shadow: 0 8px 40px rgba(0,0,0,0.5); transform: translateY(20px) scale(.97); transition: transform .22s; }
 .ds-modal-overlay.open .ds-modal { transform: translateY(0) scale(1); }
 .ds-modal-header { padding: 22px 26px 16px; border-bottom: 1px solid rgba(255,255,255,0.09); display: flex; align-items: center; gap: 12px; }
@@ -258,8 +258,8 @@ select.profile-edit-input { background-image: url("data:image/svg+xml,%3Csvg xml
 .ds-inperson-note svg { width: 12px; height: 12px; flex-shrink: 0; }
 
 /* PRE-SIGNING INTAKE PROMPT */
-.ps-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); z-index: 450; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .2s; }
-.ps-modal-overlay.open { opacity: 1; pointer-events: all; }
+.ps-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); z-index: 450; display: none; align-items: center; justify-content: center; }
+.ps-modal-overlay.open { display: flex; }
 .ps-modal { background: #1a2e45; border: 1px solid rgba(255,255,255,0.09); border-radius: 18px; width: 480px; max-width: 96vw; box-shadow: 0 8px 40px rgba(0,0,0,0.5); transform: translateY(20px) scale(.97); transition: transform .22s; }
 .ps-modal-overlay.open .ps-modal { transform: translateY(0) scale(1); }
 .ps-modal-header { padding: 22px 26px 16px; border-bottom: 1px solid rgba(255,255,255,0.09); display: flex; align-items: center; gap: 12px; }
@@ -337,8 +337,8 @@ select.profile-edit-input { background-image: url("data:image/svg+xml,%3Csvg xml
 .file-add:hover { background: rgba(255,255,255,0.06)!important; color: #f0f4f8; }
 
 /* MODAL */
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(6px); z-index: 200; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .2s; }
-.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(6px); z-index: 200; display: none; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
 .modal { background: #1a2e45; border: 1px solid rgba(255,255,255,0.09); border-radius: 18px; width: 520px; max-width: 95vw; max-height: 90vh; overflow-y: auto; box-shadow: 0 4px 24px rgba(0,0,0,0.4); transform: translateY(16px) scale(.98); transition: transform .2s; }
 .modal-overlay.open .modal { transform: translateY(0) scale(1); }
 .modal-header { padding: 24px 26px 18px; border-bottom: 1px solid rgba(255,255,255,0.09); display: flex; align-items: center; justify-content: space-between; }
