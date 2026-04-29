@@ -1197,15 +1197,7 @@ function openSigningModal(id){
     return;
   }
 
-  // New signing — check if we need the pre-signing prompt (only for marital/county/veteran)
-  if(r.qStatus !== 'completed'){
-    const hasAll = r.marital && r.county && r.veteran;
-    if(!hasAll){
-      _openPresignPrompt(r);
-      return;
-    }
-  }
-
+  // Always open the full signing modal — BOM can adjust details there
   _openFullSigningModal(r);
   } catch(e){
     console.error('openSigningModal error:', e);
