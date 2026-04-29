@@ -190,6 +190,8 @@ select.profile-edit-input { background-image: url("data:image/svg+xml,%3Csvg xml
 .btn-start-sig:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
 .btn-start-sig.sig-sent { background: rgba(245,158,11,0.12); color: #fbbf24; border-color: rgba(245,158,11,0.3); }
 .btn-start-sig.sig-sent:hover { background: #f59e0b; color: #fff; border-color: #f59e0b; }
+.btn-start-sig.sig-blue { background: rgba(59,130,246,0.12); color: #60a5fa; border-color: rgba(59,130,246,0.3); }
+.btn-start-sig.sig-blue:hover { background: #3b82f6; color: #fff; border-color: #3b82f6; }
 .btn-start-sig.sig-done { background: rgba(16,185,129,0.12); color: #34d399; border-color: rgba(16,185,129,0.3); }
 .btn-start-sig.sig-done:hover { background: #10b981; color: #fff; border-color: #10b981; }
 .btn-start-sig:disabled { opacity: .4; cursor: not-allowed; }
@@ -827,7 +829,7 @@ function formatUpdated(d){ if(!d)return'—'; const months=['Jan','Feb','Mar','A
 
 function overallStatus(r){
   if(r.qStatus==='completed' && r.sigStatus==='completed') return 'completed';
-  if(r.qStatus==='completed' || r.sigStatus==='completed' || r.sigStatus==='pending' || r.sigStatus==='emailed' || r.sigStatus==='awaiting-spouse') return 'in-progress';
+  if(r.qStatus==='completed' || r.sigStatus==='completed' || r.sigStatus==='pending' || r.sigStatus==='emailed' || r.sigStatus==='emailed-spouse' || r.sigStatus==='awaiting-spouse') return 'in-progress';
   if(r.qStatus==='in-progress' || r.sigStatus==='in-progress') return 'in-progress';
   return 'not-started';
 }
@@ -846,6 +848,7 @@ function statusBadge(s){
     'in-progress':     ['#f59e0b','In Progress'],
     'pending':         ['#f59e0b','Sig. Pending'],
     'emailed':         ['#60a5fa','Emailed Out'],
+    'emailed-spouse':  ['#60a5fa','Emailed to Spouse'],
     'awaiting-spouse': ['#f59e0b','Awaiting Spouse'],
     'completed':       ['#10b981','Completed'],
   };
@@ -856,12 +859,13 @@ function statusBadge(s){
 
 // ── SIGNATURE BUTTON LABELS ──
 function sigBtnLabel(r){
-  if(r.sigStatus==='completed')        return {label:'Sigs Complete',    cls:'sig-done', disabled:false};
-  if(r.sigStatus==='awaiting-spouse')  return {label:'Await Spouse',     cls:'sig-sent', disabled:false};
-  if(r.sigStatus==='emailed')          return {label:'Emailed Out',      cls:'sig-sent', disabled:false};
-  if(r.sigStatus==='pending')          return {label:'Resume Sigs',      cls:'sig-sent', disabled:false};
-  if(r.sigStatus==='in-progress')      return {label:'Resume Sigs',      cls:'sig-sent', disabled:false};
-  return                                      {label:'Start Signatures', cls:'',         disabled:false};
+  if(r.sigStatus==='completed')          return {label:'Sigs Complete',     cls:'sig-done', disabled:false};
+  if(r.sigStatus==='awaiting-spouse')    return {label:'Start Spouse Sigs', cls:'sig-sent', disabled:false};
+  if(r.sigStatus==='emailed-spouse')     return {label:'Emailed to Spouse', cls:'sig-blue', disabled:false};
+  if(r.sigStatus==='emailed')            return {label:'Emailed Out',       cls:'sig-blue', disabled:false};
+  if(r.sigStatus==='pending')            return {label:'Resume Sigs',       cls:'sig-sent', disabled:false};
+  if(r.sigStatus==='in-progress')        return {label:'Resume Sigs',       cls:'sig-sent', disabled:false};
+  return                                        {label:'Start Signatures',  cls:'',         disabled:false};
 }
 function qBtnLabel(r){
   if(r.qStatus==='completed')   return {label:'Form Complete',   cls:'review'};
@@ -1065,10 +1069,11 @@ function getSignaturePackage(r){
 
 function buildCoreRecipients(r, includeSpouse = false){
   const recipients = [];
-  // Safe access to dsState — may not be initialized yet on first call
   const primaryType = (typeof dsState !== 'undefined' ? dsState.primaryType : null) || 'self';
+  // Core templates always use 'Resident' role — even when a rep is signing
+  // The rep's details go into the Resident slot so DocuSign can match the template field
   if(primaryType === 'rep'){
-    recipients.push({ role:'Representative', name: dsState?.repName||r.repName||'Representative', email: r.repEmail||'' });
+    recipients.push({ role:'Resident', name: dsState?.repName||r.repName||'Representative', email: r.repEmail||'' });
   } else {
     recipients.push({ role:'Resident', name: r.name, email: r.residentEmail||'' });
   }
@@ -1188,6 +1193,13 @@ function openSigningModal(id){
     } else {
       showToast('All signatures complete ✓');
     }
+    return;
+  }
+
+  // If emailed to spouse — just check status
+  if(r.sigStatus === 'emailed-spouse' && r.envelopeId){
+    checkEnvelopeStatus(r);
+    showToast('Checking if spouse has signed...');
     return;
   }
 
@@ -1493,12 +1505,22 @@ async function sendSignatureEnvelope(){
 
   const allRecipients = [
     {
-      role:   primaryIsRep ? 'Representative' : 'Resident',
+      role:   'Resident', // Core templates use Resident role even when rep signs
       name:   primaryName,
       email:  primaryEmail,
       method: effectivePrimaryMethod
     },
   ];
+
+  // When rep is signing, also add Representative role for the submissionBehalf template
+  if(primaryIsRep){
+    allRecipients.push({
+      role:   'Representative',
+      name:   primaryName,
+      email:  primaryEmail,
+      method: effectivePrimaryMethod
+    });
+  }
   if(isMarried){
     const spouseName = document.getElementById('ds-spouse-name')?.value || dsState.spouseName || 'Spouse';
     allRecipients.push({ role:'Spouse', name: spouseName, email: spouseEmail, method: effectiveSpouseMethod });
@@ -1516,9 +1538,10 @@ async function sendSignatureEnvelope(){
   // Assign consistent recipient IDs
   const roleToId = {};
   allRecipients.forEach((rec, i) => { roleToId[rec.role] = String(i + 1); });
-  // When rep is signing, also map 'Resident' role to same ID (for core templates)
-  if(primaryIsRep && !roleToId['Resident']){
-    roleToId['Resident'] = roleToId['Representative'] || '1';
+  // When rep is signing, Resident and Representative are the same person — same ID
+  if(primaryIsRep){
+    roleToId['Resident']       = '1';
+    roleToId['Representative'] = '1';
   }
 
   try{
@@ -1592,6 +1615,11 @@ async function sendSignatureEnvelope(){
       if(rec.clientUserId) actualRecipientIds[rec.clientUserId] = rec.recipientId;
     });
     console.log('Actual recipient IDs:', actualRecipientIds);
+
+    // Save spouse method for later reference
+    if(isMarried){
+      r.spouseSigningMethod = effectiveSpouseMethod;
+    }
 
     // Start polling for status updates every 30 seconds
     startPolling();
@@ -1937,10 +1965,12 @@ function openProfile(id){
           <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Signatures</div>
           <div class="workflow-progress-bar" style="margin-bottom:5px"><div class="workflow-progress-fill s" style="width:${r.sigPct}%"></div></div>
           <div style="font-size:11px;color:#64748b;margin-bottom:12px">${r.sigPct}% signed</div>
-          <button class="btn-start-sig ${s.cls}" style="width:100%;justify-content:center" ${sigAttrs}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            ${s.label}
-          </button>
+          <button class="btn-start-sig ${s.cls}" style="width:100%;justify-content:center;margin-bottom:${(r.sigStatus==='emailed'||r.sigStatus==='emailed-spouse')&&r.envelopeId?'8px':'0'}" ${sigAttrs}>${s.label}</button>
+          ${(r.sigStatus==='emailed'||r.sigStatus==='emailed-spouse')&&r.envelopeId ? `
+          <button onclick="resendSigningEmail('${r.id}')" style="width:100%;display:flex;align-items:center;justify-content:center;gap:6px;padding:6px;border-radius:6px;font-size:11px;font-weight:600;color:#60a5fa;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);cursor:pointer;font-family:'DM Sans',sans-serif">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            Resend Email
+          </button>` : ''}
         </div>
       </div>
 
@@ -2968,9 +2998,20 @@ function qSubmit(){
   document.querySelector('.q-form-footer').style.display = 'none';
 }
 
-// ══════════════════════════════════════════
-//  ARCHIVE
-// ══════════════════════════════════════════
+// Resend signing email
+async function resendSigningEmail(id){
+  const r = residents.find(x=>x.id===id);
+  if(!r || !r.envelopeId) return;
+  showToast('Resending signing email...');
+  try{
+    const data = await dsAPI('resendEmail', { envelopeId: r.envelopeId });
+    if(data.error){ showToast('Could not resend: ' + data.error); }
+    else { showToast('✓ Signing email resent successfully'); }
+  } catch(e){
+    showToast('Could not resend email');
+    console.error(e);
+  }
+}
 let archiveResidentId = null;
 
 function archiveResident(id){
@@ -3131,14 +3172,23 @@ renderList();
         if(event === 'signing_complete'){
           const signingRole = sessionStorage.getItem('ds_signing_role') || 'Resident';
           if(r.marital === 'married' && signingRole !== 'Spouse'){
-            // Resident signed — automatically open spouse session
-            r.sigStatus = 'awaiting-spouse';
-            r.updated   = new Date().toISOString().split('T')[0];
-            renderList();
-            showToast('✓ Resident signed — opening spouse signing session...');
-            // Auto-open spouse session immediately
-            setTimeout(() => _resumeSpouseSigningSession(r), 1000);
-            sessionStorage.removeItem('ds_signing_role');
+            // Resident signed — now handle spouse
+            const spouseMethod = residentSigningState[r.id]?.spouseMethod || dsState.spouseMethod || 'inperson';
+            if(spouseMethod === 'email'){
+              r.sigStatus = 'emailed-spouse';
+              r.updated   = new Date().toISOString().split('T')[0];
+              sessionStorage.removeItem('ds_signing_role');
+              renderList();
+              showToast('✓ Resident signed — spouse link sent by email');
+            } else {
+              // In-person spouse — auto-open spouse session
+              r.sigStatus = 'awaiting-spouse';
+              r.updated   = new Date().toISOString().split('T')[0];
+              renderList();
+              showToast('✓ Resident signed — opening spouse signing session...');
+              setTimeout(() => _resumeSpouseSigningSession(r), 1000);
+              sessionStorage.removeItem('ds_signing_role');
+            }
           } else {
             checkEnvelopeStatus(r);
           }
@@ -3181,7 +3231,7 @@ function startPolling(){
     const activeResidents = residents.filter(r =>
       r.envelopeId &&
       r.sigStatus !== 'completed' &&
-      (r.sigStatus === 'pending' || r.sigStatus === 'in-progress' || r.sigStatus === 'awaiting-spouse' || r.sigStatus === 'emailed')
+      (r.sigStatus === 'pending' || r.sigStatus === 'in-progress' || r.sigStatus === 'awaiting-spouse' || r.sigStatus === 'emailed' || r.sigStatus === 'emailed-spouse')
     );
     for(const r of activeResidents){
       await checkEnvelopeStatus(r);
