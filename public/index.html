@@ -1227,9 +1227,10 @@ function _openPresignPrompt(r){
   if(psAnswers.signer)  _psPillSelect('signer',  psAnswers.signer);
   if(psAnswers.veteran) _psPillSelect('veteran', psAnswers.veteran);
 
-  document.getElementById('ps-resident-sub').textContent =
-    `${r.name} · ${r.id}`;
-  document.getElementById('ps-modal-overlay').classList.add('open');
+  document.getElementById('ps-resident-sub').textContent = `${r.name} · ${r.id}`;
+  const psOverlay = document.getElementById('ps-modal-overlay');
+  psOverlay.classList.add('open');
+  psOverlay.style.display = 'flex';
 }
 
 function psSelect(field, value){
@@ -1296,7 +1297,9 @@ function psConfirm(){
 }
 
 function closePsModal(){
-  document.getElementById('ps-modal-overlay').classList.remove('open');
+  const psOverlay = document.getElementById('ps-modal-overlay');
+  psOverlay.classList.remove('open');
+  psOverlay.style.display = 'none';
   psAnswers = {};
 }
 
@@ -1368,7 +1371,8 @@ function _openFullSigningModal(r){
   const overlay = document.getElementById('ds-modal-overlay');
   console.log('ds-modal-overlay found:', !!overlay, 'display:', overlay?.style.display);
   overlay.classList.add('open');
-  console.log('modal open class added, display now:', overlay?.style.display);
+  overlay.style.display = 'flex';
+  console.log('modal opened, display now:', overlay?.style.display);
 }
 
 // Save state when modal closes
@@ -1376,7 +1380,9 @@ function closeSigningModal(){
   if(signingResident){
     residentSigningState[signingResident.id] = { ...dsState };
   }
-  document.getElementById('ds-modal-overlay').classList.remove('open');
+  const overlay = document.getElementById('ds-modal-overlay');
+  overlay.classList.remove('open');
+  overlay.style.display = 'none';
   signingResident = null;
 }
 
