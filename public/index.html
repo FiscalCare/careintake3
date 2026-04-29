@@ -1320,14 +1320,18 @@ const dsState = {
 const residentSigningState = {}; // keyed by resident ID
 
 function _openFullSigningModal(r){
+  console.log('_openFullSigningModal called for:', r.name);
   signingResident = r;
   const isMarried = r.marital === 'married';
 
   // Always reset the send button when modal opens
   const sendBtn = document.getElementById('ds-send-btn');
+  console.log('ds-send-btn found:', !!sendBtn);
   if(sendBtn){ sendBtn.textContent = 'Start Signing'; sendBtn.disabled = false; }
 
-  document.getElementById('ds-modal-resident-name').textContent = r.name;
+  const nameEl = document.getElementById('ds-modal-resident-name');
+  console.log('ds-modal-resident-name found:', !!nameEl);
+  if(nameEl) nameEl.textContent = r.name;
   document.getElementById('ds-modal-resident-sub').textContent =
     `${r.county} County · ${r.marital.charAt(0).toUpperCase()+r.marital.slice(1)}${r.veteran==='yes'?' · Veteran':''}`;
 
@@ -1361,7 +1365,10 @@ function _openFullSigningModal(r){
   w.style.display = missing > 0 ? 'block' : 'none';
   if(missing > 0) w.textContent = `⚠ ${missing} template ID${missing>1?'s':''} not yet configured.`;
 
-  document.getElementById('ds-modal-overlay').classList.add('open');
+  const overlay = document.getElementById('ds-modal-overlay');
+  console.log('ds-modal-overlay found:', !!overlay, 'display:', overlay?.style.display);
+  overlay.classList.add('open');
+  console.log('modal open class added, display now:', overlay?.style.display);
 }
 
 // Save state when modal closes
