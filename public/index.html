@@ -1372,6 +1372,7 @@ function _openFullSigningModal(r){
   console.log('ds-modal-overlay found:', !!overlay, 'display:', overlay?.style.display);
   overlay.classList.add('open');
   overlay.style.display = 'flex';
+  overlay.style.zIndex = '9999';
   console.log('modal opened, display now:', overlay?.style.display);
 }
 
