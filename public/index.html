@@ -1529,39 +1529,22 @@ async function sendSignatureEnvelope(){
             .filter(rec => {
               const mappedRole = getRoleForTemplate(p.id, rec.role);
               const recFull = allRecipients.find(a => a.role === mappedRole || a.role === rec.role);
-              return recFull && recFull.method === 'email';
+              return !!recFull;
             })
             .map((rec, ri) => {
               const mappedRole = getRoleForTemplate(p.id, rec.role);
               const recFull = allRecipients.find(a => a.role === mappedRole || a.role === rec.role);
-              return {
-                roleName:      rec.role,
-                recipientId:   roleToId[recFull.role] || String(ri + 1),
-                name:          recFull.name || rec.name,
-                email:         recFull.email,
-                routingOrder:  String(ri + 1),
-                recipientType: 'signer',
-                tabs: buildPrefillTabs(r, p.id),
-              };
-            }),
-          inPersonSigners: p.recipients
-            .filter(rec => {
-              const mappedRole = getRoleForTemplate(p.id, rec.role);
-              const recFull = allRecipients.find(a => a.role === mappedRole || a.role === rec.role);
-              return recFull && recFull.method === 'inperson';
-            })
-            .map((rec, ri) => {
-              const mappedRole = getRoleForTemplate(p.id, rec.role);
-              const recFull = allRecipients.find(a => a.role === mappedRole || a.role === rec.role);
+              const isInPerson = recFull.method === 'inperson';
+              const email = isInPerson
+                ? `embedded.${rec.role.toLowerCase().replace(/[^a-z0-9]/g,'')}@careintake.local`
+                : recFull.email;
               return {
                 roleName:     rec.role,
                 recipientId:  roleToId[recFull.role] || String(ri + 1),
-                signerName:   recFull.name || rec.name,
-                signerEmail:  `embedded.${rec.role.toLowerCase().replace(/[^a-z0-9]/g,'')}@careintake.local`,
-                hostName:     DS_CONFIG.bom.name,
-                hostEmail:    DS_CONFIG.bom.email,
-                clientUserId: `${r.id}-${rec.role}`,
+                name:         recFull.name || rec.name,
+                email,
                 routingOrder: String(ri + 1),
+                ...(isInPerson ? { clientUserId: `${r.id}-${rec.role}` } : {}),
                 tabs: buildPrefillTabs(r, p.id),
               };
             }),
