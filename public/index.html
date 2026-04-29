@@ -1370,6 +1370,8 @@ function _openFullSigningModal(r){
 
   const overlay = document.getElementById('ds-modal-overlay');
   console.log('ds-modal-overlay found:', !!overlay, 'display:', overlay?.style.display);
+  // Move to body root to escape any CSS stacking contexts
+  document.body.appendChild(overlay);
   overlay.classList.add('open');
   overlay.style.display = 'flex';
   overlay.style.zIndex = '9999';
