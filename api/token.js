@@ -78,6 +78,15 @@ module.exports = async (req, res) => {
       return res.status(recResp.status).json(recResp.data);
     }
 
+    // Resend signing email
+    if(action === 'resendEmail'){
+      const resendResp = await apiRequest('PUT',
+        `/restapi/v2.1/accounts/${ACCOUNT_ID}/envelopes/${body.envelopeId}/recipients?resend_envelope=true`,
+        token, {}
+      );
+      return res.status(resendResp.status).json(resendResp.data);
+    }
+
     // Get envelope status and recipient details
     if(action === 'getEnvelope'){
       const envResp = await apiRequest('GET',
