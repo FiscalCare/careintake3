@@ -1437,17 +1437,21 @@ async function sendSignatureEnvelope(){
   const sendBtn = document.getElementById('ds-send-btn');
   const isMarried = r.marital === 'married';
 
-  // Read current email values from DOM
-  const primaryEmail = document.getElementById('ds-primary-email')?.value || dsState.primaryEmail;
-  const spouseEmail  = document.getElementById('ds-spouse-email')?.value  || dsState.spouseEmail;
-  const repName      = document.getElementById('ds-rep-name-input')?.value || dsState.repName;
+  // Read current values from DOM — most reliable source
+  const primaryEmail  = document.getElementById('ds-primary-email')?.value.trim() || dsState.primaryEmail;
+  const spouseEmail   = document.getElementById('ds-spouse-email')?.value.trim()  || dsState.spouseEmail;
+  const repName       = document.getElementById('ds-rep-name-input')?.value.trim() || dsState.repName;
+  // Check method from button active state (most reliable)
+  const primaryMethodFromUI = document.getElementById('ds-pm-email')?.classList.contains('active-email') ? 'email' : 'inperson';
+  const spouseMethodFromUI  = document.getElementById('ds-sm-email')?.classList.contains('active-email')  ? 'email' : 'inperson';
+  const effectivePrimaryMethod = primaryMethodFromUI;
+  const effectiveSpouseMethod  = spouseMethodFromUI;
 
-  // Validate email if needed
-  if(dsState.primaryMethod === 'email' && !primaryEmail.trim()){
+  if(effectivePrimaryMethod === 'email' && !primaryEmail){
     showToast('Please enter an email address for the primary signer');
     return;
   }
-  if(isMarried && dsState.spouseMethod === 'email' && !spouseEmail.trim()){
+  if(isMarried && effectiveSpouseMethod === 'email' && !spouseEmail){
     showToast('Please enter the spouse\'s email address');
     return;
   }
@@ -1485,12 +1489,12 @@ async function sendSignatureEnvelope(){
       role:   primaryIsRep ? 'Representative' : 'Resident',
       name:   primaryName,
       email:  primaryEmail,
-      method: dsState.primaryMethod
+      method: effectivePrimaryMethod
     },
   ];
   if(isMarried){
     const spouseName = document.getElementById('ds-spouse-name')?.value || dsState.spouseName || 'Spouse';
-    allRecipients.push({ role:'Spouse', name: spouseName, email: spouseEmail, method: dsState.spouseMethod });
+    allRecipients.push({ role:'Spouse', name: spouseName, email: spouseEmail, method: effectiveSpouseMethod });
   }
 
   // For core templates, rep signs as 'Resident' role
@@ -1530,11 +1534,12 @@ async function sendSignatureEnvelope(){
               const mappedRole = getRoleForTemplate(p.id, rec.role);
               const recFull = allRecipients.find(a => a.role === mappedRole || a.role === rec.role);
               return {
-                roleName:     rec.role,
-                recipientId:  roleToId[recFull.role] || String(ri + 1),
-                name:         recFull.name || rec.name,
-                email:        recFull.email,
-                routingOrder: String(ri + 1),
+                roleName:      rec.role,
+                recipientId:   roleToId[recFull.role] || String(ri + 1),
+                name:          recFull.name || rec.name,
+                email:         recFull.email,
+                routingOrder:  String(ri + 1),
+                recipientType: 'signer',
                 tabs: buildPrefillTabs(r, p.id),
               };
             }),
