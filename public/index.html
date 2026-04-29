@@ -1524,19 +1524,17 @@ async function sendSignatureEnvelope(){
             .filter(rec => {
               const mappedRole = getRoleForTemplate(p.id, rec.role);
               const recFull = allRecipients.find(a => a.role === mappedRole || a.role === rec.role);
-              return recFull && recFull.method !== 'inperson';
+              return recFull && recFull.method === 'email';
             })
             .map((rec, ri) => {
               const mappedRole = getRoleForTemplate(p.id, rec.role);
               const recFull = allRecipients.find(a => a.role === mappedRole || a.role === rec.role);
-              const email = recFull.email || `signing.${rec.role.toLowerCase().replace(/[^a-z0-9]/g,'')}@careintake.local`;
               return {
-                roleName:       rec.role,
-                recipientId:    roleToId[recFull.role] || String(ri + 1),
-                name:           recFull.name || rec.name,
-                email,
-                routingOrder:   String(ri + 1),
-                deliveryMethod: 'email',
+                roleName:     rec.role,
+                recipientId:  roleToId[recFull.role] || String(ri + 1),
+                name:         recFull.name || rec.name,
+                email:        recFull.email,
+                routingOrder: String(ri + 1),
                 tabs: buildPrefillTabs(r, p.id),
               };
             }),
@@ -1549,12 +1547,11 @@ async function sendSignatureEnvelope(){
             .map((rec, ri) => {
               const mappedRole = getRoleForTemplate(p.id, rec.role);
               const recFull = allRecipients.find(a => a.role === mappedRole || a.role === rec.role);
-              const email = `embedded.${rec.role.toLowerCase().replace(/[^a-z0-9]/g,'')}@careintake.local`;
               return {
                 roleName:     rec.role,
                 recipientId:  roleToId[recFull.role] || String(ri + 1),
                 signerName:   recFull.name || rec.name,
-                signerEmail:  DS_CONFIG.bom.email,
+                signerEmail:  `embedded.${rec.role.toLowerCase().replace(/[^a-z0-9]/g,'')}@careintake.local`,
                 hostName:     DS_CONFIG.bom.name,
                 hostEmail:    DS_CONFIG.bom.email,
                 clientUserId: `${r.id}-${rec.role}`,
