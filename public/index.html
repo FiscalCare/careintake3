@@ -1099,7 +1099,7 @@ async function _resumeSigningSession(r){
       viewRequest: {
         returnUrl:            DS_CONFIG.redirectUri + `?signed=${r.envelopeId}`,
         authenticationMethod: 'none',
-        email:                DS_CONFIG.bom.email,
+        email:                `embedded.${role.toLowerCase().replace(/[^a-z0-9]/g,'')}@careintake.local`,
         userName:             r.name,
         clientUserId,
         recipientId,
@@ -1144,7 +1144,7 @@ async function _resumeSpouseSigningSession(r){
       viewRequest: {
         returnUrl:            DS_CONFIG.redirectUri + `?signed=${r.envelopeId}`,
         authenticationMethod: 'none',
-        email:                DS_CONFIG.bom.email,
+        email:                `embedded.spouse@careintake.local`,
         userName:             spouseDisplayName,
         clientUserId,
         recipientId,
@@ -1653,7 +1653,7 @@ async function sendSignatureEnvelope(){
         viewRequest: {
           returnUrl:            DS_CONFIG.redirectUri + `?signed=${envelopeId}`,
           authenticationMethod: 'none',
-          email:                DS_CONFIG.bom.email,
+          email:                `embedded.${role.toLowerCase().replace(/[^a-z0-9]/g,'')}@careintake.local`,
           userName:             signer.name,
           clientUserId,
           recipientId,
@@ -1661,12 +1661,13 @@ async function sendSignatureEnvelope(){
       });
 
       if(viewData.url){
+        showToast(`Opening signing session for ${signer.name}...`);
         const win = window.open(viewData.url, '_blank');
         if(!win){
-          // Fallback to same tab if popup still blocked
-          window.location.href = viewData.url;
+          showToast('Popup blocked — opening in same tab...');
+          setTimeout(() => { window.location.href = viewData.url; }, 1000);
         } else {
-          showToast(`Signing opened for ${signer.name} — new tab`);
+          showToast(`✓ Signing opened for ${signer.name} — new tab`);
         }
       } else {
         showToast(`Could not get signing URL: ${viewData.message||'unknown error'}`);
