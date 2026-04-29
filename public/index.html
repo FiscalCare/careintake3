@@ -622,6 +622,7 @@ select.form-control-m { background-image: url("data:image/svg+xml,%3Csvg xmlns='
           <div class="filter-tab active" onclick="setFilter('outstanding',this)">Outstanding</div>
           <div class="filter-tab" onclick="setFilter('all',this)">All</div>
           <div class="filter-tab" onclick="setFilter('completed',this)">Completed</div>
+          <div class="filter-tab" onclick="setFilter('archived',this)">Archived</div>
         </div>
         <div style="margin-left:auto">
           <button class="btn btn-ghost btn-sm">
@@ -881,8 +882,9 @@ function renderList(){
     const matchSearch = r.name.toLowerCase().includes(search)||r.county.toLowerCase().includes(search)||r.id.toLowerCase().includes(search);
     const status = overallStatus(r);
     const matchFilter = currentFilter === 'all'
-      || (currentFilter === 'outstanding' && overallStatus(r) !== 'completed')
-      || (currentFilter === 'completed'   && overallStatus(r) === 'completed');
+      || (currentFilter === 'outstanding' && !r.archived && overallStatus(r) !== 'completed')
+      || (currentFilter === 'completed'   && !r.archived && overallStatus(r) === 'completed')
+      || (currentFilter === 'archived'    && r.archived === true);
     return matchSearch&&matchFilter;
   });
 
@@ -908,7 +910,7 @@ function renderList(){
         <div class="res-avatar" style="background:${bg};color:#fff">${initials(r.name)}</div>
         <div>
           <div class="res-name-text">${r.name}</div>
-          <div class="res-id">${r.id}</div>
+          <div class="res-id">${r.id}${r.archived && r.archiveReason ? ` · <span style="color:#f87171;font-size:10px">${r.archiveReason}</span>` : ''}</div>
         </div>
       </div>
       <div>${statusBadge(status)}</div>
@@ -918,7 +920,10 @@ function renderList(){
       <div class="row-actions" onclick="event.stopPropagation()">
         <button class="btn-start-q ${q.cls}" onclick="event.stopPropagation();launchQuestionnaire('${r.id}')">${qLabel}</button>
         <button class="btn-start-sig ${s.cls}" onclick="event.stopPropagation();${s.disabled ? '' : `openSigningModal('${r.id}')`}">${sLabel}</button>
-        <button class="action-icon-btn" title="Add note" onclick="openNoteModal('${r.id}')" style="${r.notes?'color:#fbbf24':''}">
+        <button class="action-icon-btn" title="${r.archived ? 'Unarchive' : 'Archive'}" onclick="event.stopPropagation();${r.archived ? `unarchiveResident('${r.id}')` : `archiveResident('${r.id}')`}" style="${r.archived?'color:#f87171':''}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+        </button>
+        <button class="action-icon-btn" title="Add note" onclick="event.stopPropagation();openNoteModal('${r.id}')" style="${r.notes?'color:#fbbf24':''}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="12" y1="17" x2="8" y2="17"/></svg>
         </button>
         <button class="action-icon-btn" title="View profile" onclick="openProfile('${r.id}')">
@@ -932,8 +937,9 @@ function renderList(){
 }
 
 function updateStats(){
-  const total     = residents.length;
-  const completed = residents.filter(r=>overallStatus(r)==='completed').length;
+  const active      = residents.filter(r => !r.archived);
+  const total       = active.length;
+  const completed   = active.filter(r => overallStatus(r) === 'completed').length;
   const outstanding = total - completed;
   document.getElementById('stat-total').textContent    = total;
   document.getElementById('stat-progress').textContent = outstanding;
@@ -2066,7 +2072,7 @@ function addResident(){
   const colorIdx=residents.length%avatarColors.length;
   const today=new Date().toISOString().split('T')[0];
   const newId='R-'+String(residents.length+1).padStart(4,'0');
-  residents.unshift({ id:newId,name,dob,ssn:ssnMasked,ssnReal,county,marital,veteran,signer:signerSelected,qStatus:'not-started',sigStatus:'not-started',updated:today,colorIdx,qPct:0,sigPct:0,notes:'' });
+  residents.unshift({ id:newId,name,dob,ssn:ssnMasked,ssnReal,county,marital,veteran,signer:signerSelected,qStatus:'not-started',sigStatus:'not-started',updated:today,colorIdx,qPct:0,sigPct:0,notes:'',archived:false });
   closeModal();
   saveToStorage();
   renderList();
@@ -2963,8 +2969,68 @@ function qSubmit(){
 }
 
 // ══════════════════════════════════════════
-//  NOTES
+//  ARCHIVE
 // ══════════════════════════════════════════
+let archiveResidentId = null;
+
+function archiveResident(id){
+  const r = residents.find(x=>x.id===id);
+  if(!r) return;
+
+  // If both complete, archive immediately without reason
+  if(overallStatus(r) === 'completed'){
+    r.archived = true;
+    r.archiveDate = new Date().toISOString().split('T')[0];
+    r.archiveReason = 'Completed';
+    saveToStorage();
+    renderList();
+    showToast(`${r.name} archived`);
+    return;
+  }
+
+  // Otherwise require a reason
+  archiveResidentId = id;
+  document.getElementById('archive-modal-name').textContent = `Archive — ${r.name}`;
+  document.getElementById('archive-reason-input').value = '';
+  document.getElementById('archive-reason-error').style.display = 'none';
+  const overlay = document.getElementById('archive-modal-overlay');
+  overlay.style.display = 'flex';
+  document.body.appendChild(overlay);
+  setTimeout(() => document.getElementById('archive-reason-input').focus(), 100);
+}
+
+function closeArchiveModal(){
+  document.getElementById('archive-modal-overlay').style.display = 'none';
+  archiveResidentId = null;
+}
+
+function confirmArchive(){
+  const reason = document.getElementById('archive-reason-input').value.trim();
+  if(!reason){
+    document.getElementById('archive-reason-error').style.display = 'block';
+    return;
+  }
+  const r = residents.find(x=>x.id===archiveResidentId);
+  if(!r) return;
+  r.archived     = true;
+  r.archiveDate  = new Date().toISOString().split('T')[0];
+  r.archiveReason = reason;
+  saveToStorage();
+  renderList();
+  closeArchiveModal();
+  showToast(`${r.name} archived`);
+}
+
+function unarchiveResident(id){
+  const r = residents.find(x=>x.id===id);
+  if(!r) return;
+  r.archived     = false;
+  r.archiveReason = '';
+  r.archiveDate  = '';
+  saveToStorage();
+  renderList();
+  showToast(`${r.name} restored`);
+}
 let noteResidentId = null;
 
 function openNoteModal(id){
@@ -3143,6 +3209,12 @@ async function checkEnvelopeStatus(r){
       r.updated   = new Date().toISOString().split('T')[0];
       sessionStorage.removeItem('ds_signing_resident');
       stopPolling();
+      // Auto-archive if questionnaire is also complete
+      if(r.qStatus === 'completed'){
+        r.archived     = true;
+        r.archiveDate  = new Date().toISOString().split('T')[0];
+        r.archiveReason = 'Completed';
+      }
       renderList();
       showToast(`✓ All signatures complete for ${r.name}!`);
       downloadSignedPDF(r);
@@ -3284,6 +3356,36 @@ async function downloadSignedPDF(r){
       <button class="btn btn-primary" onclick="psConfirm()" style="background:#8b5cf6;border-color:#8b5cf6">
         Continue to Signatures →
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- ARCHIVE MODAL -->
+<div class="note-overlay" id="archive-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:500;align-items:center;justify-content:center">
+  <div class="ds-modal" style="width:440px;max-height:400px">
+    <div class="ds-modal-header">
+      <div class="ds-modal-icon" style="background:rgba(239,68,68,0.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+      </div>
+      <div>
+        <div class="ds-modal-title" id="archive-modal-name">Archive Resident</div>
+        <div class="ds-modal-sub">A reason is required to archive an incomplete record</div>
+      </div>
+      <button class="ds-modal-close" onclick="closeArchiveModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div style="padding:20px 26px">
+      <div style="font-size:12px;color:#94a3b8;margin-bottom:8px">Reason for archiving <span style="color:#ef4444">*</span></div>
+      <textarea id="archive-reason-input" placeholder="e.g. Resident passed away, transferred to another facility, duplicate record..."
+        style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);border-radius:8px;color:#f0f4f8;font-family:'DM Sans',sans-serif;font-size:13px;padding:12px;outline:none;resize:vertical;min-height:100px;transition:border .15s;line-height:1.5;box-sizing:border-box"
+        onfocus="this.style.borderColor='#ef4444'"
+        onblur="this.style.borderColor='rgba(255,255,255,0.09)'"></textarea>
+      <div id="archive-reason-error" style="color:#f87171;font-size:11px;margin-top:6px;display:none">Please enter a reason before archiving.</div>
+    </div>
+    <div style="padding:16px 26px;border-top:1px solid rgba(255,255,255,0.09);display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closeArchiveModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmArchive()" style="background:#ef4444;border-color:#ef4444">Archive Resident</button>
     </div>
   </div>
 </div>
