@@ -914,8 +914,8 @@ function renderList(){
       <div style="font-size:12px;color:#94a3b8">${r.county}</div>
       <div class="last-updated">${formatUpdated(r.updated)}</div>
       <div class="row-actions" onclick="event.stopPropagation()">
-        <button class="btn-start-q ${q.cls}" onclick="launchQuestionnaire('${r.id}')">${qLabel}</button>
-        <button class="btn-start-sig ${s.cls}" ${sigAttrs}>${sLabel}</button>
+        <button class="btn-start-q ${q.cls}" onclick="event.stopPropagation();launchQuestionnaire('${r.id}')">${qLabel}</button>
+        <button class="btn-start-sig ${s.cls}" onclick="event.stopPropagation();${s.disabled ? '' : `openSigningModal('${r.id}')`}">${sLabel}</button>
         <button class="action-icon-btn" title="Add note" onclick="openNoteModal('${r.id}')" style="${r.notes?'color:#fbbf24':''}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="12" y1="17" x2="8" y2="17"/></svg>
         </button>
