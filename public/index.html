@@ -1100,7 +1100,7 @@ async function _resumeSigningSession(r){
         returnUrl:            DS_CONFIG.redirectUri + `?signed=${r.envelopeId}`,
         authenticationMethod: 'none',
         email:                DS_CONFIG.bom.email,
-        userName:             DS_CONFIG.bom.name,
+        userName:             r.name,
         clientUserId,
         recipientId,
       }
@@ -1138,13 +1138,14 @@ async function _resumeSpouseSigningSession(r){
     // Keep ds_signing_resident set so portal knows who this is on return
     sessionStorage.setItem('ds_signing_resident', r.id);
     sessionStorage.setItem('ds_signing_role', 'Spouse');
+    const spouseDisplayName = residentSigningState[r.id]?.spouseName || r.spouseName || 'Spouse';
     const viewData = await dsAPI('recipientView', {
       envelopeId: r.envelopeId,
       viewRequest: {
         returnUrl:            DS_CONFIG.redirectUri + `?signed=${r.envelopeId}`,
         authenticationMethod: 'none',
         email:                DS_CONFIG.bom.email,
-        userName:             DS_CONFIG.bom.name,
+        userName:             spouseDisplayName,
         clientUserId,
         recipientId,
       }
@@ -1653,7 +1654,7 @@ async function sendSignatureEnvelope(){
           returnUrl:            DS_CONFIG.redirectUri + `?signed=${envelopeId}`,
           authenticationMethod: 'none',
           email:                DS_CONFIG.bom.email,
-          userName:             DS_CONFIG.bom.name,
+          userName:             signer.name,
           clientUserId,
           recipientId,
         }
