@@ -1140,23 +1140,23 @@ async function _resumeSpouseSigningSession(r){
       ...(recipientsData.inPersonSigners || []),
       ...(recipientsData.signers || []),
     ];
+    console.log('All envelope recipients:', allRecs.map(r=>({role:r.roleName,id:r.recipientId,cuid:r.clientUserId,email:r.email})));
     const matchedRec = allRecs.find(rec =>
       rec.clientUserId === clientUserId || rec.roleName === 'Spouse'
     );
+    console.log('Matched spouse recipient:', matchedRec);
     const recipientId = matchedRec?.recipientId || '2';
-    console.log('Spouse recipient id:', recipientId);
+    const signerEmail = matchedRec?.email || `embedded.spouse@careintake.local`;
 
-    const spouseName = residentSigningState[r.id]?.spouseName || r.spouseName || 'Spouse';
-    // Keep ds_signing_resident set so portal knows who this is on return
+    const spouseDisplayName = residentSigningState[r.id]?.spouseName || r.spouseName || 'Spouse';
     localStorage.setItem('ds_signing_resident', r.id);
     localStorage.setItem('ds_signing_role', 'Spouse');
-    const spouseDisplayName = residentSigningState[r.id]?.spouseName || r.spouseName || 'Spouse';
     const viewData = await dsAPI('recipientView', {
       envelopeId: r.envelopeId,
       viewRequest: {
         returnUrl:            DS_CONFIG.redirectUri + `?signed=${r.envelopeId}`,
         authenticationMethod: 'none',
-        email:                `embedded.spouse@careintake.local`,
+        email:                signerEmail,
         userName:             spouseDisplayName,
         clientUserId,
         recipientId,
