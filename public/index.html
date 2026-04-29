@@ -2986,12 +2986,18 @@ function openNoteModal(id){
   noteResidentId = id;
   document.getElementById('note-modal-name').textContent = r.name;
   document.getElementById('note-textarea').value = r.notes || '';
-  document.getElementById('note-modal-overlay').classList.add('open');
+  const overlay = document.getElementById('note-modal-overlay');
+  overlay.style.display = 'flex';
+  overlay.style.opacity = '1';
+  overlay.style.pointerEvents = 'all';
   setTimeout(() => document.getElementById('note-textarea').focus(), 100);
 }
 
 function closeNoteModal(){
-  document.getElementById('note-modal-overlay').classList.remove('open');
+  const overlay = document.getElementById('note-modal-overlay');
+  overlay.style.display = 'none';
+  overlay.style.opacity = '0';
+  overlay.style.pointerEvents = 'none';
   noteResidentId = null;
 }
 
@@ -3296,7 +3302,7 @@ async function downloadSignedPDF(r){
 </div>
 
 <!-- NOTE MODAL -->
-<div class="ds-modal-overlay" id="note-modal-overlay">
+<div class="ds-modal-overlay" id="note-modal-overlay" style="display:none">
   <div class="ds-modal" style="width:440px;max-height:400px">
     <div class="ps-modal-header">
       <div class="ps-modal-icon" style="background:rgba(251,191,36,0.12)">
