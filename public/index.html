@@ -1010,8 +1010,7 @@ function getSignaturePackage(r){
       tagCls: 'cond',
       desc: 'DOH-5147 Submission on Behalf, Form 2848 (POA)',
       recipients: [
-        { role:'Representative', name: r.repName||'Representative', email: r.repEmail||'' },
-        { role:'Resident',       name: r.name,                      email: r.residentEmail||'' },
+        { role:'Resident', name: r.repName||'Representative', email: r.repEmail||'' },
       ],
     });
   }
@@ -1086,7 +1085,9 @@ function buildCoreRecipients(r, includeSpouse = false){
 // Resume an existing signing session
 async function _resumeSigningSession(r){
   if(!r.envelopeId) return;
-  const role = dsState.primaryType === 'rep' ? 'Representative' : 'Resident';
+  // Always use Resident role — that's what the envelope was created with
+  // (even when a rep is signing, we use Resident role in the signers array)
+  const role = 'Resident';
   const clientUserId = `${r.id}-${role}`;
 
   showToast('Reopening signing session...');
@@ -1147,8 +1148,8 @@ async function _resumeSpouseSigningSession(r){
 
     const spouseName = residentSigningState[r.id]?.spouseName || r.spouseName || 'Spouse';
     // Keep ds_signing_resident set so portal knows who this is on return
-    sessionStorage.setItem('ds_signing_resident', r.id);
-    sessionStorage.setItem('ds_signing_role', 'Spouse');
+    localStorage.setItem('ds_signing_resident', r.id);
+    localStorage.setItem('ds_signing_role', 'Spouse');
     const spouseDisplayName = residentSigningState[r.id]?.spouseName || r.spouseName || 'Spouse';
     const viewData = await dsAPI('recipientView', {
       envelopeId: r.envelopeId,
@@ -1205,14 +1206,14 @@ function openSigningModal(id){
 
   // If awaiting spouse signature — open spouse signing session
   if(r.sigStatus === 'awaiting-spouse' && r.envelopeId){
-    sessionStorage.setItem('ds_signing_resident', r.id);
+    localStorage.setItem('ds_signing_resident', r.id);
     _resumeSpouseSigningSession(r);
     return;
   }
 
   // If pending, emailed or in-progress with existing envelope — reopen or check status
   if((r.sigStatus === 'pending' || r.sigStatus === 'in-progress' || r.sigStatus === 'emailed') && r.envelopeId){
-    sessionStorage.setItem('ds_signing_resident', r.id);
+    localStorage.setItem('ds_signing_resident', r.id);
     _resumeSigningSession(r);
     return;
   }
@@ -1505,22 +1506,12 @@ async function sendSignatureEnvelope(){
 
   const allRecipients = [
     {
-      role:   'Resident', // Core templates use Resident role even when rep signs
+      role:   'Resident',
       name:   primaryName,
       email:  primaryEmail,
       method: effectivePrimaryMethod
     },
   ];
-
-  // When rep is signing, also add Representative role for the submissionBehalf template
-  if(primaryIsRep){
-    allRecipients.push({
-      role:   'Representative',
-      name:   primaryName,
-      email:  primaryEmail,
-      method: effectivePrimaryMethod
-    });
-  }
   if(isMarried){
     const spouseName = document.getElementById('ds-spouse-name')?.value || dsState.spouseName || 'Spouse';
     allRecipients.push({ role:'Spouse', name: spouseName, email: spouseEmail, method: effectiveSpouseMethod });
@@ -1529,20 +1520,13 @@ async function sendSignatureEnvelope(){
   // For core templates, rep signs as 'Resident' role
   // For submission-behalf template, rep signs as 'Representative' role
   function getRoleForTemplate(templateId, defaultRole){
-    if(defaultRole === 'Representative' && templateId !== DS_CONFIG.templates.submissionBehalf){
-      return 'Resident'; // core templates use Resident even when rep is signing
-    }
+    // All templates now use 'Resident' role
     return defaultRole;
   }
 
   // Assign consistent recipient IDs
   const roleToId = {};
   allRecipients.forEach((rec, i) => { roleToId[rec.role] = String(i + 1); });
-  // When rep is signing, Resident and Representative are the same person — same ID
-  if(primaryIsRep){
-    roleToId['Resident']       = '1';
-    roleToId['Representative'] = '1';
-  }
 
   try{
     const compositeTemplates = pkg.map((p, idx) => ({
@@ -1636,8 +1620,8 @@ async function sendSignatureEnvelope(){
       const role = signer.role;
       const clientUserId = `${r.id}-${role}`;
 
-      sessionStorage.setItem('ds_signing_resident', r.id);
-      sessionStorage.setItem('ds_signing_role', role);
+      localStorage.setItem('ds_signing_resident', r.id);
+      localStorage.setItem('ds_signing_role', role);
 
       // Use _recipients from envelope creation response if available
       const allRecs = [
@@ -3162,7 +3146,7 @@ renderList();
   const event  = urlParams.get('event');
   if(signed){
     window.history.replaceState({}, '', window.location.pathname);
-    const residentId = sessionStorage.getItem('ds_signing_resident');
+    const residentId = localStorage.getItem('ds_signing_resident');
     if(residentId){
       const r = residents.find(x => x.id === residentId);
       if(r){
@@ -3170,14 +3154,14 @@ renderList();
         r.updated    = new Date().toISOString().split('T')[0];
 
         if(event === 'signing_complete'){
-          const signingRole = sessionStorage.getItem('ds_signing_role') || 'Resident';
+          const signingRole = localStorage.getItem('ds_signing_role') || 'Resident';
           if(r.marital === 'married' && signingRole !== 'Spouse'){
             // Resident signed — now handle spouse
-            const spouseMethod = residentSigningState[r.id]?.spouseMethod || dsState.spouseMethod || 'inperson';
+            const spouseMethod = r.spouseSigningMethod || 'inperson';
             if(spouseMethod === 'email'){
               r.sigStatus = 'emailed-spouse';
               r.updated   = new Date().toISOString().split('T')[0];
-              sessionStorage.removeItem('ds_signing_role');
+              localStorage.removeItem('ds_signing_role');
               renderList();
               showToast('✓ Resident signed — spouse link sent by email');
             } else {
@@ -3187,13 +3171,13 @@ renderList();
               renderList();
               showToast('✓ Resident signed — opening spouse signing session...');
               setTimeout(() => _resumeSpouseSigningSession(r), 1000);
-              sessionStorage.removeItem('ds_signing_role');
+              localStorage.removeItem('ds_signing_role');
             }
           } else {
             checkEnvelopeStatus(r);
           }
         } else if(event === 'cancel' || event === 'decline'){
-          const signingRole = sessionStorage.getItem('ds_signing_role') || 'Resident';
+          const signingRole = localStorage.getItem('ds_signing_role') || 'Resident';
           if(r.marital === 'married' && signingRole === 'Spouse'){
             // Spouse cancelled — stay as awaiting-spouse
             r.sigStatus = 'awaiting-spouse';
@@ -3204,10 +3188,10 @@ renderList();
             renderList();
             showToast('Signing cancelled — click "In Progress" to resume');
           }
-          sessionStorage.removeItem('ds_signing_role');
+          localStorage.removeItem('ds_signing_role');
         } else {
           // Session ended without explicit event — check what role was signing
-          const signingRole = sessionStorage.getItem('ds_signing_role') || 'Resident';
+          const signingRole = localStorage.getItem('ds_signing_role') || 'Resident';
           if(r.marital === 'married' && signingRole === 'Spouse'){
             r.sigStatus = 'awaiting-spouse';
           } else {
@@ -3257,7 +3241,7 @@ async function checkEnvelopeStatus(r){
       r.sigStatus = 'completed';
       r.sigPct    = 100;
       r.updated   = new Date().toISOString().split('T')[0];
-      sessionStorage.removeItem('ds_signing_resident');
+      localStorage.removeItem('ds_signing_resident');
       stopPolling();
       // Auto-archive if questionnaire is also complete
       if(r.qStatus === 'completed'){
