@@ -129,8 +129,8 @@ body { font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden
 
 /* TABLE */
 .table-wrap { background: #132033; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; overflow: hidden; }
-.table-head { display: grid; grid-template-columns: 1.6fr .8fr .7fr .7fr .8fr 300px; padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.09); font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: #64748b; font-weight: 500; }
-.table-row { display: grid; grid-template-columns: 1.6fr .8fr .7fr .7fr .8fr 300px; padding: 13px 20px; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.07); cursor: pointer; transition: background .12s; }
+.table-head { display: grid; grid-template-columns: 1.4fr .7fr .7fr .7fr .7fr 1fr; padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.09); font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: #64748b; font-weight: 500; }
+.table-row { display: grid; grid-template-columns: 1.4fr .7fr .7fr .7fr .7fr 1fr; padding: 13px 20px; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.07); cursor: pointer; transition: background .12s; }
 .table-row:last-child { border-bottom: none; }
 .table-row:hover { background: rgba(255,255,255,0.04); }
 
@@ -163,7 +163,7 @@ body { font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden
 select.profile-edit-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 30px; }
 
 /* ROW ACTIONS — the key new area */
-.row-actions { display: flex; align-items: center; gap: 5px; justify-content: flex-end; }
+.row-actions { display: flex; align-items: center; gap: 4px; justify-content: flex-end; flex-wrap: wrap; }
 
 .btn-start-sig {
   display: inline-flex; align-items: center; gap: 5px;
@@ -856,16 +856,16 @@ function statusBadge(s){
 
 // ── SIGNATURE BUTTON LABELS ──
 function sigBtnLabel(r){
-  if(r.sigStatus==='completed')        return {label:'Signatures Complete', cls:'sig-done', disabled:false};
-  if(r.sigStatus==='awaiting-spouse')  return {label:'Awaiting Spouse',     cls:'sig-sent', disabled:false};
-  if(r.sigStatus==='pending')          return {label:'Resume Signatures',   cls:'sig-sent', disabled:false};
-  if(r.sigStatus==='in-progress')      return {label:'Resume Signatures',   cls:'sig-sent', disabled:false};
-  return                                      {label:'Start Signatures',    cls:'',         disabled:false};
+  if(r.sigStatus==='completed')        return {label:'Sigs Complete',    cls:'sig-done', disabled:false};
+  if(r.sigStatus==='awaiting-spouse')  return {label:'Await Spouse',     cls:'sig-sent', disabled:false};
+  if(r.sigStatus==='pending')          return {label:'Resume Sigs',      cls:'sig-sent', disabled:false};
+  if(r.sigStatus==='in-progress')      return {label:'Resume Sigs',      cls:'sig-sent', disabled:false};
+  return                                      {label:'Start Signatures', cls:'',         disabled:false};
 }
 function qBtnLabel(r){
-  if(r.qStatus==='completed')   return {label:'Questionnaire Complete',  cls:'review'};
-  if(r.qStatus==='in-progress') return {label:'Resume Questionnaire',    cls:'resume'};
-  return                               {label:'Start Form',              cls:''};
+  if(r.qStatus==='completed')   return {label:'Form Complete',   cls:'review'};
+  if(r.qStatus==='in-progress') return {label:'Resume Form',     cls:'resume'};
+  return                               {label:'Start Form',      cls:''};
 }
 
 // ══════════════════════════════════════════
